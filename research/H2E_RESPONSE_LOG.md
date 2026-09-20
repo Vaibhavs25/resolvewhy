@@ -1,32 +1,43 @@
 # H2e response log
 
-## Outreach status — 2026-09-20
 
-| Person | Project | Channel | Sent? | Response? | Classification | Technical takeaway |
-|---|---|---|---|---|---|---|
-| Damian Shaw | resolvelib / pip | Outlook email to publicly documented damian.peter.shaw@gmail.com | Yes | No substantive reply yet | E — Non-response (pending) | None yet |
-| Pradyun Gedam | pip / PyPA | Outlook email to publicly documented pradyunsg@gmail.com | Yes | No substantive reply yet | E — Non-response (pending) | None yet |
-| Randy Döring | Poetry | Outlook email to publicly documented radoering.poetry@gmail.com | Yes | No substantive reply yet | E — Non-response (pending) | None yet |
-| Charlie Marsh | uv / Astral | Outlook email to publicly documented charlie.r.marsh@gmail.com | No | No | E — Non-response / not sent | Outlook account returned HTTP 403: Account suspended. This is an execution limitation, not maintainer feedback. |
-| ddelange | pipgrip | Outlook email to publicly documented ddelange@delange.dev | Yes | No substantive reply yet | E — Non-response (pending) | None yet |
+## Mailbox check — 2026-09-20
 
-### Sent messages
+The connected Outlook mailbox was checked for replies to the four successful outreach attempts using recipient identity, the exact outreach subject, and the requested keywords (resolvewhy, dependency-resolution, structured evidence, resolver, trace, RFC).
 
-All successful emails used the subject:
+| Person | Project | Message sent | Response found | Response date | Substantive? | Technical feedback | Classification | Implications for resolvewhy-trace/v0 |
+|---|---|---|---|---|---|---|---|---|
+| Damian Shaw | resolvelib / pip | Yes | No | — | No | No incoming message from the verified recipient address; search hits were only the sent outreach message. | — | No change; maintainer evidence still absent. |
+| Pradyun Gedam | pip / PyPA | Yes | No | — | No | No incoming message from the verified recipient address; search hits were only the sent outreach message. | — | No change; maintainer evidence still absent. |
+| Randy Döring | Poetry | Yes | No | — | No | No incoming message from the verified recipient address; search hits were only the sent outreach message. | — | No change; maintainer evidence still absent. |
+| ddelange | pipgrip | Yes | No | — | No | No incoming message from the verified recipient address; search hits were only the sent outreach message. | — | No change; maintainer evidence still absent. |
+| Charlie Marsh | uv / Astral | No | No | — | No | Not contacted because the connected Outlook account returned HTTP 403 (account suspended). This is an execution limitation, not maintainer feedback. | — | No evidence either way. |
 
-**Research question: structured dependency-resolution evidence**
+### Current result
 
-Each was sent individually with no CC/BCC and linked to:
-https://github.com/Vaibhavs25/resolvewhy/issues/2
+**0 substantive responses as of 2026-09-20. H2e remains NOT TESTED.**
 
-The messages were personalized to the recipient's resolver/packaging work and explicitly requested negative technical feedback rather than endorsement or promotion.
+No delivery notification, automatic reply, generic acknowledgement, silence, or failed-send condition is treated as technical feedback.
 
-### Exact delivery records
+### Follow-up policy
 
-- Damian Shaw — sent 2026-09-20 17:00:11 UTC-equivalent mailbox timestamp.
-- Pradyun Gedam — sent 2026-09-20 16:59:56 UTC-equivalent mailbox timestamp.
-- Randy Döring — sent 2026-09-20 16:59:57 UTC-equivalent mailbox timestamp.
-- ddelange — sent 2026-09-20 16:59:59 UTC-equivalent mailbox timestamp.
-- Charlie Marsh — send attempt blocked by Outlook account suspension; no delivery claim.
+No follow-up was sent during this execution.
 
-No substantive external response has been received at this point. Silence is not treated as support or disconfirmation.
+Earliest reasonable follow-up date: **2026-09-27** (one week after the 2026-09-20 outreach), provided no substantive response has arrived before then.
+
+A single concise follow-up would qualify for Damian Shaw, Pradyun Gedam, Randy Döring, and ddelange only if they remain non-responsive at that point. Charlie Marsh does not qualify through the suspended Outlook route.
+
+Planned follow-up message:
+
+"Subject: Re: Research question: structured dependency-resolution evidence
+
+Hi [Name],
+
+Following up once on my research question about a versioned machine-readable dependency-resolution evidence surface. I’m specifically looking for technical criticism or constraints around candidate completeness, resolver/provider boundaries, incompatibility/rejection evidence, and whether this would be realistic to expose.
+
+No endorsement is needed; a brief negative or partial assessment is useful.
+
+RFC: https://github.com/Vaibhavs25/resolvewhy/issues/2
+
+Best,
+Vaibhav"
