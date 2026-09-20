@@ -1,0 +1,1 @@
+The validation rubric is published in the repository's prepared research materials. Substantive feedback is classified as Strong validation, Useful partial validation, Neutral, Disconfirmation, or Non-response.
