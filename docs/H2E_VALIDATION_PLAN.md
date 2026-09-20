@@ -1,0 +1,1 @@
+The H2e validation plan is published in the repository's prepared research materials. It defines the empirical validation protocol, the maintainer sample, response classification, and the rule that silence or generic praise is not validation.
