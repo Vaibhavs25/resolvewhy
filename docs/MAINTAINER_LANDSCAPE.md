@@ -1,0 +1,1 @@
+The maintainer landscape is published as a research reference identifying technically relevant resolver and packaging contributors, their relevant public work, public interaction channels, and relevance to H2e.
