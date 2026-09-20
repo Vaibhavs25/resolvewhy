@@ -2,19 +2,31 @@
 
 **Status: NOT TESTED**
 
-Public research artifact:
+The public research artifact is available at:
+https://github.com/Vaibhavs25/resolvewhy
 https://github.com/Vaibhavs25/resolvewhy/issues/2
 
-1. **Problem exists:** supported by prior technical research and controlled experiments.
-2. **Evidence abstraction is technically meaningful:** supported in controlled resolvelib traces.
-3. **Evidence abstraction is realistic to expose:** supported narrowly by resolvelib instrumentation, but maintainer evaluation is absent.
-4. **Maintainers would consume it:** not tested.
-5. **Portable across ecosystems:** unproven.
+## Current claims
 
-## Outreach status
+- Problem exists: supported by prior technical research.
+- Semantic abstraction is technically meaningful: supported in controlled resolvelib traces.
+- Realistic exposure: supported narrowly by controlled resolvelib instrumentation.
+- Downstream consumption by maintainers: **NOT TESTED**.
+- Cross-ecosystem portability: **UNPROVEN**.
 
-No maintainer has successfully been contacted through the connected GitHub integration.
+## Outreach
 
-The first attempted public contact, Damian Shaw via resolvelib issue #171, was rejected with HTTP 403 because the integration is not authorized to write comments in third-party repositories.
+Four of five fixed first-wave targets received individualized email through the connected Outlook account:
 
-No maintainer validation is claimed and no silence is treated as evidence.
+- Damian Shaw
+- Pradyun Gedam
+- Randy Döring
+- ddelange
+
+Charlie Marsh has not received the message. The publicly documented address was verified, but Outlook returned HTTP 403 because the connected account is suspended. No retry was made.
+
+There are currently **0 substantive maintainer responses**.
+
+Therefore H2e remains **NOT TESTED**.
+
+No silence, delivery event, or failed send is treated as technical validation.
