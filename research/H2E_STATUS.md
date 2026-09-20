@@ -1,0 +1,1 @@
+The current H2e status before maintainer feedback remains **NOT TESTED**. H2a is supported narrowly, H2b partially supported, H2c supported in controlled traces, H2d unproven, and H2e awaits substantive maintainer feedback.
