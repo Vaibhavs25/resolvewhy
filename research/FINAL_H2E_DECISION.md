@@ -12,28 +12,44 @@ https://github.com/Vaibhavs25/resolvewhy
 RFC:
 https://github.com/Vaibhavs25/resolvewhy/issues/2
 
-## Maintainer contact status
+## Outreach performed
 
-The fixed first wave is:
+Four individualized research emails were successfully sent through Outlook:
 
 1. Damian Shaw — resolvelib / pip
 2. Pradyun Gedam — pip / PyPA
 3. Randy Döring — Poetry
-4. Charlie Marsh — uv / Astral
-5. ddelange — pipgrip
+4. ddelange — pipgrip
 
-One public outreach attempt was made to Damian Shaw through resolvelib issue #171. GitHub returned HTTP 403 because the connected integration lacks permission to comment on third-party repositories. No other maintainer was contacted.
+One target remains uncontacted:
 
-## Evidence received
+5. Charlie Marsh — uv / Astral
 
-None.
+Charlie’s publicly documented address was verified, but the connected Outlook account returned HTTP 403 Account suspended when the send was attempted. This is an execution constraint, not evidence about H2e, and the send was not retried.
 
-## Interpretation
+## Responses
 
-The GitHub permission failure is an execution constraint, not evidence about H2e. H2e therefore remains NOT TESTED.
+**Substantive responses: 0**
+
+Therefore no A-D rubric classification has been assigned.
+
+## Technical findings so far
+
+None from maintainers.
+
+The experiment has established that a legitimate outbound path exists for four of the five targets through the connected mailbox, but that says nothing about whether the proposed evidence abstraction is useful or realistic.
+
+## Remaining unknowns
+
+- Whether maintainers consider candidate completeness meaningful.
+- Which evidence fields they would regard as authoritative.
+- Whether rejection and incompatibility events should be public, opt-in, or internal.
+- Whether provenance can be exposed without freezing resolver internals.
+- Whether a resolver-neutral semantic model survives cross-resolver scrutiny.
+- Whether maintainers would consume such an interface.
 
 ## Decision
 
 **CONTINUE RESEARCH**
 
-The next research step is to use a permitted public channel for the fixed first-wave targets and then record substantive technical feedback against the preregistered rubric.
+Wait for substantive replies from the contacted maintainers, use at most one concise follow-up according to the pre-registered policy, and record technical feedback field-by-field. Do not infer support from silence and do not advance to production architecture.
