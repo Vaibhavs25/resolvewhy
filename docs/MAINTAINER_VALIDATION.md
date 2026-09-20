@@ -1,0 +1,1 @@
+The maintainer validation brief is published in the repository's prepared research materials. It defines the technical research question, evidence-quality questions, completeness boundary, API shape, resolver boundary, derived evidence, portability, and maintenance-cost questions. No adoption commitment is requested; negative technical feedback is explicitly valuable.
