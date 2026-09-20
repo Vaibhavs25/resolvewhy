@@ -1,25 +1,32 @@
 # H2e response log
 
-**Status:** Outreach blocked by connector permission before any maintainer message was successfully posted.
+## Outreach status — 2026-09-20
 
-## 2026-09-20 — Damian Shaw
+| Person | Project | Channel | Sent? | Response? | Classification | Technical takeaway |
+|---|---|---|---|---|---|---|
+| Damian Shaw | resolvelib / pip | Outlook email to publicly documented damian.peter.shaw@gmail.com | Yes | No substantive reply yet | E — Non-response (pending) | None yet |
+| Pradyun Gedam | pip / PyPA | Outlook email to publicly documented pradyunsg@gmail.com | Yes | No substantive reply yet | E — Non-response (pending) | None yet |
+| Randy Döring | Poetry | Outlook email to publicly documented radoering.poetry@gmail.com | Yes | No substantive reply yet | E — Non-response (pending) | None yet |
+| Charlie Marsh | uv / Astral | Outlook email to publicly documented charlie.r.marsh@gmail.com | No | No | E — Non-response / not sent | Outlook account returned HTTP 403: Account suspended. This is an execution limitation, not maintainer feedback. |
+| ddelange | pipgrip | Outlook email to publicly documented ddelange@delange.dev | Yes | No substantive reply yet | E — Non-response (pending) | None yet |
 
-- **Project:** resolvelib / pip
-- **Public channel attempted:** https://github.com/sarugaku/resolvelib/issues/171 via public GitHub issue comment, mentioning @notatallshaw
-- **Message version:** Damian first-wave draft
-- **Response status:** NOT SENT — GitHub connector returned HTTP 403 (Resource not accessible by integration)
-- **Substantive response:** None
-- **Technical points:** None
-- **Schema implications:** None
-- **Rubric classification:** E — Non-response / not contacted successfully
+### Sent messages
 
-The attempted channel is public and technically relevant, but the connected GitHub integration does not have permission to post comments to third-party repositories. No alternative private contact was inferred, and no workaround was used.
+All successful emails used the subject:
 
-## Remaining first-wave targets
+**Research question: structured dependency-resolution evidence**
 
-- Pradyun Gedam — pip / PyPA
-- Randy Döring — Poetry
-- Charlie Marsh — uv / Astral
-- ddelange — pipgrip
+Each was sent individually with no CC/BCC and linked to:
+https://github.com/Vaibhavs25/resolvewhy/issues/2
 
-No silence, profile activity, or lack of permission is treated as validation.
+The messages were personalized to the recipient's resolver/packaging work and explicitly requested negative technical feedback rather than endorsement or promotion.
+
+### Exact delivery records
+
+- Damian Shaw — sent 2026-09-20 17:00:11 UTC-equivalent mailbox timestamp.
+- Pradyun Gedam — sent 2026-09-20 16:59:56 UTC-equivalent mailbox timestamp.
+- Randy Döring — sent 2026-09-20 16:59:57 UTC-equivalent mailbox timestamp.
+- ddelange — sent 2026-09-20 16:59:59 UTC-equivalent mailbox timestamp.
+- Charlie Marsh — send attempt blocked by Outlook account suspension; no delivery claim.
+
+No substantive external response has been received at this point. Silence is not treated as support or disconfirmation.
