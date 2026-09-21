@@ -148,7 +148,7 @@ def valid_trace() -> Trace:
         premise_refs=("c:req",),
     )
     return Trace(
-        schema="resolvewhy-trace/research-2026",
+        schema="resolvewhy-trace/1.0",
         resolver_name="test-resolver",
         resolver_version="1",
         resolver_commit=None,
