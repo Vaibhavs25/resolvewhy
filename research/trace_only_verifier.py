@@ -33,6 +33,9 @@ def structural(t):
     if any(x is None for x in eids) or len(eids)!=len(set(eids)): return False,'invalid dependency IDs'
     cids=[e.get('id') for e in t['semantic_constraints']]
     if any(x is None for x in cids) or len(cids)!=len(set(cids)): return False,'invalid constraint IDs'
+    req_ids={x.get('id') for x in t['requirements'] if isinstance(x,dict)}
+    dep_ids={x.get('id') for x in t['dependencies'] if isinstance(x,dict)}
+    sem_by_id={x.get('id'):x for x in t['semantic_constraints'] if isinstance(x,dict)}
     for e in t['dependencies']:
         if e.get('parent_candidate') not in ids: return False,'dangling dependency parent'
         if 'requirement' not in e: return False,'missing dependency requirement'
@@ -43,17 +46,13 @@ def structural(t):
         if cov.get('status')=='complete' and not isinstance(cov.get('attestation'),dict): return False,'complete coverage lacks attestation'
         if any(x not in ids for x in q.get('candidate_ids',[])): return False,'dangling coverage candidate'
     if not t['provenance']: return False,'missing provenance'
-    evidence_ids={p.get('id') for p in t['provenance'] if isinstance(p,dict)}
     evidence_refs=set()
     for q in t['candidate_domains']:
         a=q.get('coverage',{}).get('attestation',{})
         if isinstance(a,dict): evidence_refs.update(a.get('evidence_refs',[]))
-    semantic_ids={c.get('id') for c in t['semantic_constraints']}
-    req_ids={r.get('id') for r in t['requirements']}
-    dep_ids={d.get('id') for d in t['dependencies']}
-    claimed=set(claim.get('premise_refs',[]))
-    if not claimed.issubset(semantic_ids): return False,'proof premise is not a declared semantic constraint'
+    claimed=list(claim.get('premise_refs',[]))
     for sid in claimed:
+        if sid not in sem_by_id: return False,'proof premise is not a declared semantic constraint'
         matches=[p for p in t['provenance'] if isinstance(p,dict) and sid in p.get('premise_refs',[])]
         if not matches: return False,'proof premise lacks provenance'
         if not any(any(ref in evidence_refs or ref in dep_ids or ref in req_ids for ref in p.get('premise_refs',[])) for p in matches):
