@@ -141,31 +141,42 @@ def branch_sat(t,env):
 
 def verify(t):
     try:
-        ok,why=structural(t)
-        if not ok:return 'INVALID_TRACE',why
-        if t['evidence_state'].get('overall') in {'missing','incomplete','unknown'}: return 'INSUFFICIENT_EVIDENCE','evidence incomplete'
-    # The finite executable fragment currently supports fixed prerelease/source policy
-    # only structurally; unsupported policy semantics are not inferred.
-    policy=t['resolution_policy']
-    if policy.get('prerelease') not in {'disallow'} or policy.get('source_selection') not in {'fixed'}:
-        return 'INSUFFICIENT_EVIDENCE','unsupported executable policy semantics'
-    if any(q.get('coverage',{}).get('status')!='complete' for q in t['candidate_domains']): return 'INSUFFICIENT_EVIDENCE','candidate coverage incomplete'
-    results=[branch_sat(t,e) for e in t['evaluation_domain'] if isinstance(e,dict) and 'id' in e]
-    if len(results)!=len(t['evaluation_domain']): return 'INVALID_TRACE','malformed evaluation domain entry'
-    if t['trace_scope']=='universal':
-        if all(not x for x in results): return 'VERIFIED_UNSAT',results
-        if all(x for x in results): return 'VERIFIED_SAT',results
-        return 'INSUFFICIENT_EVIDENCE',results
-    if t['trace_scope']=='existential':
-        return ('VERIFIED_SAT',results) if any(results) else ('VERIFIED_UNSAT',results)
-    if t['trace_scope']=='branch':
-        branch_ref=t['proof_claim'].get('branch_ref')
-        if not branch_ref or branch_ref not in {e.get('id') for e in t['evaluation_domain']}:
-            return 'INVALID_TRACE','branch claim lacks valid branch_ref'
-        selected=[x for x in t['evaluation_domain'] if x.get('id')==branch_ref]
-        result=branch_sat(t,selected[0])
-        return ('VERIFIED_SAT',[result]) if result else ('VERIFIED_UNSAT',[result])
-        return 'INVALID_TRACE','unsupported trace scope'
+        ok, why = structural(t)
+        if not ok:
+            return 'INVALID_TRACE', why
+        if t['evidence_state'].get('overall') in {'missing','incomplete','unknown'}:
+            return 'INSUFFICIENT_EVIDENCE', 'evidence incomplete'
+
+        policy = t['resolution_policy']
+        if policy.get('prerelease') not in {'disallow'} or policy.get('source_selection') not in {'fixed'}:
+            return 'INSUFFICIENT_EVIDENCE', 'unsupported executable policy semantics'
+        if any(q.get('coverage',{}).get('status') != 'complete' for q in t['candidate_domains']):
+            return 'INSUFFICIENT_EVIDENCE', 'candidate coverage incomplete'
+
+        results = [branch_sat(t,e) for e in t['evaluation_domain'] if isinstance(e,dict) and 'id' in e]
+        if len(results) != len(t['evaluation_domain']):
+            return 'INVALID_TRACE', 'malformed evaluation domain entry'
+
+        if t['trace_scope'] == 'universal':
+            if all(not x for x in results):
+                return 'VERIFIED_UNSAT', results
+            if all(x for x in results):
+                return 'VERIFIED_SAT', results
+            return 'INSUFFICIENT_EVIDENCE', results
+
+        if t['trace_scope'] == 'existential':
+            return ('VERIFIED_SAT', results) if any(results) else ('VERIFIED_UNSAT', results)
+
+        if t['trace_scope'] == 'branch':
+            branch_ref = t['proof_claim'].get('branch_ref')
+            domain_ids = {e.get('id') for e in t['evaluation_domain']}
+            if not branch_ref or branch_ref not in domain_ids:
+                return 'INVALID_TRACE', 'branch claim lacks valid branch_ref'
+            selected = [e for e in t['evaluation_domain'] if e.get('id') == branch_ref]
+            result = branch_sat(t, selected[0])
+            return ('VERIFIED_SAT', [result]) if result else ('VERIFIED_UNSAT', [result])
+
+        return 'INVALID_TRACE', 'unsupported trace scope'
     except (ValueError, KeyError, TypeError, IndexError) as exc:
         return 'INVALID_TRACE', f'uninterpretable finite semantic data: {exc}'
 
