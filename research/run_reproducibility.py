@@ -124,6 +124,7 @@ def run():
     require("branch conservative", v["verify"](branch)[0] == "INSUFFICIENT_EVIDENCE")
 
     worlds, raw_collisions, repaired_collisions, _ = c["collision_search"]()
+    require("historical raw collision family preserved", raw_collisions >= 1)
     require("projection harness has 64 worlds", worlds == 64)
     require("post-repair collisions zero", repaired_collisions == 0)
     require("native deletion preserves truth", c["native_deletion_check"]() is True)
