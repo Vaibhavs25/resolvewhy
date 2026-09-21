@@ -102,7 +102,7 @@ The historical full-corpus experiment recorded:
 - 250 deterministic serialization mutations produced 0 incorrectly accepted verified proofs;
 - an extended 256-world post-repair projection search produced 0 semantic collisions in the committed harness.
 
-The current clean executable runner regenerates the finite committed verifier checks, one executable subset-minimal proof fixture, exactly 250 deterministic mutation cases, and the **extended 256-world projection harness**. It does not freshly re-execute the historical 18-case resolver corpus; that corpus remains a serialized research record.
+The current clean executable runner regenerates the finite committed verifier checks, one executable subset-minimal proof fixture, exactly 250 deterministic mutation cases, and the **extended 256-world projection harness**. It does not freshly re-execute the historical 18-case resolver corpus; that corpus remains a serialized research record. In the current execution environment, GitHub was reachable only through the repository connector; an independent local `git clone` attempt was blocked by the environment's external DNS/network restriction, so this pass records code-level alignment rather than claiming a local end-to-end clone run.
 
 These are research-boundary counts, not universal or exhaustive guarantees. See `research/REPRODUCIBILITY_INDEX.md`.
 
