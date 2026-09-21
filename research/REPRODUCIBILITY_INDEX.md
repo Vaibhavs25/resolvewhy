@@ -64,3 +64,26 @@ The current runner independently regenerates the 250 mutation result and the cur
 
 `research/trace_only_verifier.py` is a research fixture verifier, not a general package-manager verifier. It intentionally implements only the finite semantic fragment used by the committed fixture. Branch scope remains conservative and returns `INSUFFICIENT_EVIDENCE` rather than pretending a generic branch selector is implemented.
 
+
+## Final clean-run command
+
+```bash
+python research/run_reproducibility.py
+```
+
+Expected current executable summary:
+
+```text
+REPRODUCIBILITY SUITE
+EXECUTABLE_VERIFIER_SCOPE = finite fixture fragment
+TRACE_ONLY_CORPUS = historical 18-case record (not regenerated here)
+SERIALIZATION_ROUNDTRIP = 1/1
+HERMETIC_REPLAY = 1/1
+SUBSET_MINIMAL_PROOFS = 1 executable fixture (historical full-corpus record: 2)
+MUTATION_CASES = 250
+MUTATION_FALSE_ACCEPTS = 0
+PROJECTION_WORLDS = 64
+POST_REPAIR_COLLISIONS = 0
+```
+
+These are executable expectations of the committed clean runner; the 18-case and 256-world figures remain historical research records.
