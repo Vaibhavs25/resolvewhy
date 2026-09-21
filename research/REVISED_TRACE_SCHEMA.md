@@ -190,7 +190,40 @@ Rules:
 
 The distinction is essential because the same candidate/dependency facts may be satisfiable on the active interpreter while unsatisfiable on another environment that belongs to the declared supported domain.
 
-## 10. Rejection observations
+
+## 19. Proof claim
+
+A trace intended to support a verified result MUST declare the quantifier/scope of that result explicitly.
+
+Conceptual shape:
+
+~~~json
+{
+  "id": "claim:1",
+  "kind": "satisfiability",
+  "quantifier": "universal",
+  "evaluation_domain_ref": "eval-domain:1",
+  "status_claim": "UNSAT",
+  "premise_refs": ["c:root", "c:dep"]
+}
+~~~
+
+Allowed quantifiers:
+- existential
+- universal
+- branch
+
+Rules:
+1. A multi-environment claim MUST bind its quantifier to an explicit `evaluation_domain`.
+2. A `branch` claim MUST identify the branch/environment to which it applies.
+3. A policy setting such as `universal` or `fork` MUST NOT be treated as the proof quantifier by itself.
+4. The verifier MUST reject a claim whose quantifier or evaluation-domain reference is missing, malformed, or inconsistent.
+5. The claimed result is not evidence; it is the proposition to be independently checked.
+6. Proof premises referenced by the claim MUST be represented in the semantic trace and connected to provenance.
+
+Reason: the same semantic constraints can be SAT over one declared environment domain and UNSAT over a larger domain. The quantifier and its bound domain are therefore part of the mathematical proof problem.
+
+## 11. Rejection observations
 
 A rejection is an observation, not automatically a proof.
 
