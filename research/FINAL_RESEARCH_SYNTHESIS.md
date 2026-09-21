@@ -268,8 +268,3 @@ H2e is **NOT TESTED**. The repository contains no substantive maintainer feedbac
 **MAINTAINER VALIDATION REMAINS OPEN.**
 
 **PRODUCTION IMPLEMENTATION REMAINS A SEPARATE FUTURE DECISION.**
-## Executable reproducibility alignment — 2026-09-21
-
-The final clean runner currently regenerates the 250-case mutation campaign and a 64-world projection-search subset. The repository does not contain an executable 18-fixture corpus runner or the historical 256-world extended generator. Therefore those historical figures are retained as dated research evidence and are not represented as fresh outputs of the clean runner.
-
-The final scientific claim remains bounded accordingly: trace-only verification is validated within the tested finite semantic fragment, while the current clone-and-run executable entry point provides a smaller, directly regenerable fixture-level demonstration plus deterministic mutation and projection checks.
