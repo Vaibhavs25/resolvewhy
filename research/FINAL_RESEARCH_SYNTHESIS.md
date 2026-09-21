@@ -102,7 +102,7 @@ The historical full-corpus experiment recorded:
 - 250 deterministic serialization mutations produced 0 incorrectly accepted verified proofs;
 - an extended 256-world post-repair projection search produced 0 semantic collisions.
 
-The current clean executable runner regenerates the finite committed verifier checks, one executable subset-minimal proof fixture, exactly 250 deterministic mutation cases, and the current 64-world projection harness. It does not regenerate the historical 18-case serialized corpus or the historical 256-world extended search.
+The current clean executable runner regenerates the finite committed verifier checks, one executable subset-minimal proof fixture, exactly 250 deterministic mutation cases, and the **extended 256-world projection harness**. It does not freshly re-execute the historical 18-case resolver corpus; that corpus remains a serialized research record.
 
 These are research-boundary counts, not universal or exhaustive guarantees. See `research/REPRODUCIBILITY_INDEX.md`.
 
@@ -193,40 +193,14 @@ Maintainer feedback would add information that technical experiments cannot prov
 
 H2e is separate from the mathematical foundation: the absence of feedback does not weaken the verified proof results; it leaves the practical interface/adoption question unresolved.
 
-## 14. Production-readiness audit
+The final clean repository now separates executable and historical evidence. The committed runner `research/run_reproducibility.py` regenerates a finite SAT/UNSAT proof fixture, a SAT negative control, serialization and hermetic replay checks, declared-core deletion checks, exactly 250 distinct deterministic mutation instances, and the 256-world projection harness.
 
-### Proven enough for research prototype
+The 18/18 serialized corpus result remains a historical fixture/replay record rather than a fresh live re-execution of every historical resolver incident. The current runner reports that distinction explicitly.
 
-- the bounded mathematical explanation engine;
-- controlled structured-trace capture in the tested resolver architecture;
-- semantic normalization for the tested fragment;
-- fail-closed evidence/coverage semantics;
-- serialized trace-only verification in the tested fragment;
-- subset-minimal explanation verification.
+The committed verifier is intentionally narrower than the semantic specification. Its executable fragment directly evaluates normalized version constraints, explicit dependency activation, the tested `Requires-Python >=3.10` rule, finite proof quantification, candidate coverage, proof-premise selection, provenance reachability, and minimality. It also checks artifact-reference integrity and a fixed policy contract, but it does not implement a general wheel-selection/build engine, general PEP 508 evaluator, complete lockfile semantics, or generic resolver policy semantics.
 
-### Not proven enough for production
+This implementation boundary is narrower than the overall research boundary and is documented as such rather than being treated as a production verifier.
 
-- stable public adapter APIs for real resolver versions;
-- versioned trace-schema compatibility guarantees over time;
-- performance and memory overhead under large real-world resolution graphs;
-- complete package metadata and build-system semantics;
-- complete wheel/sdist and hash-policy semantics;
-- complete lockfile semantics;
-- security and trust model for completeness attestations and provenance;
-- long-term backward/forward compatibility;
-- broad multi-ecosystem conformance testing;
-- maintainership and operational ownership;
-- independently reviewed production conformance suites.
-
-Accordingly, production implementation is a separate future decision and is not justified by the present research evidence alone.
-
-## 14a. Reproducibility/implementation alignment
-
-The final clean repository now separates executable and historical evidence. The committed runner `research/run_reproducibility.py` regenerates a finite SAT/UNSAT proof fixture, a SAT negative control, serialization and hermetic replay checks, declared-core deletion checks, exactly 250 distinct deterministic mutation instances, and the currently committed 64-world projection harness.
-
-The previously reported 18/18 serialized corpus and 256-world extended-search results remain historical research records because their complete fixture sets/generators are not present in the final executable entry point. They are not silently re-labeled as freshly reproduced.
-
-The committed verifier is intentionally narrower than the semantic specification: it directly evaluates only the finite version-constraint/Requires-Python fixture fragment, explicit active/inactive edges, complete finite candidate coverage, fixed supported policy values, proof quantifier/domain binding, provenance reachability, and the conservative branch outcome. It does not implement arbitrary PEP 508, generic branch selection, complete artifact/build semantics, lockfiles, or full resolver policy semantics.
 ## 15. Repository publication/readiness audit
 
 The research history should remain intact. The repository now has a dedicated final semantic boundary and conformance record, but historical status documents still contain earlier intermediate conclusions. Those historical sections should be preserved rather than rewritten, because they document the falsification path.
