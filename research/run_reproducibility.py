@@ -84,6 +84,14 @@ def run():
     base = v["base_trace"]()
     require("base UNSAT", v["verify"](base)[0] == "VERIFIED_UNSAT")
 
+    # SAT negative control: the same fixture with its transitive dependency removed.
+    sat = copy.deepcopy(base)
+    sat["dependencies"] = []
+    sat["trace_scope"] = "existential"
+    sat["proof_claim"]["quantifier"] = "existential"
+    sat["proof_claim"]["status_claim"] = "SAT"
+    require("SAT reconstruction", v["verify"](sat)[0] == "VERIFIED_SAT")
+
     roundtrip = json.loads(json.dumps(base, sort_keys=True))
     require("serialization roundtrip", v["verify"](base) == v["verify"](roundtrip))
 
