@@ -134,14 +134,17 @@ def mutate(t,name):
     return x
 
 def minimality(t):
-    base=verify(t)[0]=='VERIFIED_UNSAT'; checks=[]
-    for name in ('drop_dependency','drop_root_constraint','drop_candidate'):
+    if verify(t)[0] != 'VERIFIED_UNSAT':
+        return False, []
+    core_ids=list(t.get('claimed_core', []))
+    checks=[]
+    for cid in core_ids:
         x=clone(t)
-        if name=='drop_dependency': x['dependencies']=[]
-        elif name=='drop_root_constraint': x['requirements']=[]
-        else: x['candidate_domains'][0]['candidate_ids']=['x@2']
-        checks.append((name,verify(x)[0]))
-    return base,checks
+        x['claimed_core']=[z for z in core_ids if z != cid]
+        x['semantic_constraints']=[z for z in x['semantic_constraints'] if z.get('id') != cid]
+        x['proof_claim']['premise_refs']=[z for z in x['proof_claim']['premise_refs'] if z != cid]
+        checks.append((cid, verify(x)[0]))
+    return True, checks
 
 def main():
     t=base_trace(); d=Path(tempfile.mkdtemp(prefix='resolvewhy-trace-only-')); p=d/'trace.json'
