@@ -298,6 +298,48 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertEqual(view.kind.value, "direct_url")
         self.assertEqual(view.origin, "https://downloads.example/pkg-1.0.tar.gz")
 
+    def test_semantically_identical_native_candidates_share_one_trace_identity(self):
+        from resolvewhy.adapters.pip_resolvelib.capture import CaptureBuffer, CapturedRun, MatchEvent
+        from resolvewhy.adapters.pip_resolvelib.normalize import normalize_capture
+
+        first = FakeCandidate("pkg", Version("1.0"))
+        second = FakeCandidate("pkg", Version("1.0"))
+        self.assertIsNot(first, second)
+        buffer = CaptureBuffer()
+        buffer.matches.extend(
+            (
+                MatchEvent(
+                    sequence=buffer.next_sequence(),
+                    identifier="pkg",
+                    candidate=first,
+                ),
+                MatchEvent(
+                    sequence=buffer.next_sequence(),
+                    identifier="pkg",
+                    candidate=second,
+                ),
+            )
+        )
+        buffer.requirements.append(
+            # A simple root requirement keeps the trace structurally grounded.
+            __import__(
+                "resolvewhy.adapters.pip_resolvelib.capture",
+                fromlist=["RequirementEvent"],
+            ).RequirementEvent(
+                sequence=buffer.next_sequence(),
+                requirement=Requirement("pkg==1.0"),
+                parent=None,
+            )
+        )
+        buffer.outcome = "resolved"
+        trace = normalize_capture(
+            CapturedRun(buffer=buffer, resolver_result=object(), native_error=None),
+            self.context(),
+        )
+        self.assertEqual(len(trace.candidates), 1)
+        self.assertEqual(trace.candidates[0].package, "pkg")
+        self.assertEqual(validate_trace(trace), ())
+
     def test_source_distinct_candidates_remain_distinct(self):
         @dataclass(frozen=True)
         class FakeLink:
