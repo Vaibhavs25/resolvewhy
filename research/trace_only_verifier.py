@@ -5,9 +5,9 @@ OPS = {'==':lambda a,b:a==b,'!=':lambda a,b:a!=b,'<':lambda a,b:a<b,'<=':lambda 
 def ver(v):
     try:
         parts=tuple(int(x) for x in v.split('.'))
-        if len(parts)!=3:
+        if len(parts) not in {2, 3}:
             raise ValueError
-        return parts
+        return parts + (0,) if len(parts)==2 else parts
     except (ValueError, AttributeError):
         raise ValueError(f'unsupported version: {v!r}')
 
