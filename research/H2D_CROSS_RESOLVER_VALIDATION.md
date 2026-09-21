@@ -383,3 +383,10 @@ This finding is stronger than the previous portability result. It demonstrates t
 The H2d decision therefore remains:
 
 **B. H2d PARTIALLY SUPPORTED — PORTABILITY BOUNDARY MUST BE NARROWED.**
+
+
+## Stable references
+
+- https://github.com/sarugaku/resolvelib/blob/main/src/resolvelib/providers.py
+- https://github.com/sarugaku/resolvelib/blob/main/src/resolvelib/structs.py
+- https://docs.astral.sh/uv/reference/internals/resolver/
