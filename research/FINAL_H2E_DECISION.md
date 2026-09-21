@@ -201,3 +201,32 @@ The current strongest defensible statement is:
 > The revised resolvewhy-trace semantic contract survives the tested real-world adversarial corpus and can carry enough trustworthy evidence for independent verification in selected nontrivial cases, while correctly refusing proofs when critical evidence is incomplete. Cross-resolver interchange stability and maintainer validation remain open empirical questions.
 
 The project remains in research/falsification mode; this result does not justify production adapters or a production trace framework.
+
+
+## H2d update — cross-resolver portability experiment — 2026-09-21
+
+A direct portability experiment was completed using independent semantic mappings for pip/resolvelib and uv, with source-level mappings for Poetry/Mixology and pipgrip/PubGrub.
+
+**H2d result: B. H2d PARTIALLY SUPPORTED — PORTABILITY BOUNDARY MUST BE NARROWED.**
+
+The tested pair can preserve the same satisfiability-relevant semantics for:
+- requirements and dependency edges;
+- activation conditions;
+- opaque candidate identity;
+- artifact identity where relevant;
+- runtime context;
+- resolution policy;
+- candidate-domain coverage;
+- semantic constraints/literals;
+- provenance;
+- evidence state.
+
+The experiment also showed that native incompatibility/rejection objects, derivation trees, decision levels, backjump state, provider internals, index machinery, and human-readable diagnostics do not have one safely universal meaning. These must remain namespaced/optional.
+
+The known uv conditional-marker case was used as a critical unsafe-normalization attack: removing the activation marker and promoting the native conflict to a universal incompatibility is unsound, and the semantic proof boundary rejects it.
+
+No tested semantic field was forced into NOT REPRESENTABLE.
+
+This establishes technical portability only for the tested resolver pair and cases. It does not establish ecosystem-wide interchange, API stability, adoption, or maintainer acceptance.
+
+**H2e remains NOT TESTED.** This experiment supplied no maintainer feedback and does not change the 0 substantive-response status.
