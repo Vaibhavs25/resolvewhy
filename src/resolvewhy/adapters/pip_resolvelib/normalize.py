@@ -821,7 +821,13 @@ def normalize_capture(
 
     for index, identifier in enumerate(all_identifiers, start=1):
         domain_id = f"domain:{index:04d}"
-        refs = tuple(match_groups.get(identifier, ()))
+        refs_list = list(match_groups.get(identifier, ()))
+        # Explicit candidates can be observable through get_candidate_lookup() even
+        # when the resolver does not expose a matching event for them.
+        for candidate_ref, candidate_view_value in candidate_views.items():
+            if candidate_view_value.package == identifier and candidate_ref not in refs_list:
+                refs_list.append(candidate_ref)
+        refs = tuple(refs_list)
         scope = context.candidate_domain_scopes.get(identifier, CandidateDomainScope())
         attestation = context.coverage_attestations.get(identifier)
         coverage = CandidateCoverage(
@@ -944,12 +950,19 @@ def normalize_capture(
 
     # Any unknown candidate-domain completeness, unsupported normalization, or incomplete
     # evidence prevents the adapter from presenting the trace as proof-complete.
+    blocking_evidence_states = {
+        EvidenceStateKind.INCOMPLETE,
+        EvidenceStateKind.MISSING,
+        EvidenceStateKind.UNKNOWN,
+    }
     overall = (
         EvidenceStateKind.INCOMPLETE
-        if unsupported_reasons or any(
+        if unsupported_reasons
+        or any(
             domain.coverage.status is not CoverageStatus.COMPLETE
             for domain in candidate_domains
         )
+        or any(observation.state in blocking_evidence_states for observation in evidence_observations)
         else EvidenceStateKind.KNOWN_FACT
     )
 
