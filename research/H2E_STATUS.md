@@ -118,3 +118,27 @@ This is technical portability evidence for the tested resolver pair and cases. I
 ### H2e remains separate
 
 **H2e: NOT TESTED.** The cross-resolver experiment provides no maintainer feedback and does not alter the 0 substantive-response status.
+
+
+## Portable semantic core sufficiency falsification — 2026-09-21
+
+A direct projection-collision experiment tested the proposed portable proof core rather than native resolver compatibility alone.
+
+A finite search over 64 pip-style and uv-style native fixture worlds found a genuine pre-repair collision for universal/forked claims:
+
+- active runtime context was identical;
+- candidate, dependency, policy, coverage, provenance, and evidence fields were identical;
+- one world was scoped only to Python 3.13/Linux and was SAT;
+- the other was scoped to Python 3.13/Linux plus Python 3.9/Linux and was UNSAT because the available candidate required Python >=3.10.
+
+The missing semantic fact was the quantified evaluation domain. The current core therefore was not sufficient for multi-environment proof claims.
+
+The smallest repair was an explicit evaluation_domain proof-scope concept, distinct from runtime context and resolution policy. After repair, the same search found 0 projection collisions.
+
+Technical interpretation:
+- H2d remains **PARTIALLY SUPPORTED**;
+- the portable core is now bounded by an explicit evaluation-domain requirement for universal/forked claims;
+- native derivation trees, decision levels, candidate ordering, and similar resolver state remained removable for correctness in the tested fragment;
+- this experiment does not establish universal completeness.
+
+**H2e remains NOT TESTED.** No maintainer feedback was involved and the 0 substantive-response status is unchanged.
