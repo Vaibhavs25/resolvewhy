@@ -234,7 +234,7 @@ The latest falsification experiment tested the portable semantic proof core itse
 
 It found one genuine semantic collision family: a single-environment satisfiable trace and a universal multi-environment trace can have identical pre-repair portable projections when both use the same active runtime context and the same universal/fork policy but differ in the declared environment domain. The universal case became UNSAT because the additional Python 3.9 branch violated the candidate's Requires-Python constraint.
 
-The smallest repair was to add explicit evaluation_domain proof scope to the semantic core. After the repair, the finite search over 64 pip-style and uv-style native fixture worlds produced 0 projection collisions. Native derivation and decision-state deletion still preserved semantic truth in the tested fragment.
+The smallest repair was to add explicit `evaluation_domain` proof scope to the semantic core. The original 64-world experiment produced 0 collisions after that repair; the later extended 256-world harness also produces 0 post-repair collisions. Native derivation and decision-state deletion remained removable for correctness in the tested fragment.
 
 ### Updated technical conclusion
 
