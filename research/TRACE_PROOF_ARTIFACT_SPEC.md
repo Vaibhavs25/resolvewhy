@@ -117,3 +117,17 @@ Conversely, a trace that preserves a rich native error message but omits proof s
 ## Research boundary
 
 This specification supports the tested finite semantic fragment only. It does not establish universal completeness for arbitrary dependency resolvers, dynamic build systems, or future resolver semantics.
+
+## Proof claim binding
+
+A proof-supporting artifact MUST contain an explicit proof claim object binding:
+- result kind;
+- quantifier (existential, universal, or branch);
+- evaluation_domain_ref;
+- semantic premises asserted for verification.
+
+The result claim is a proposition to be independently verified, not authoritative resolver evidence.
+
+For a multi-environment result, quantifier plus evaluation_domain_ref together define the mathematical scope. A resolver policy flag such as universal or fork does not substitute for either.
+
+A verifier MUST return INVALID_TRACE when a multi-environment claim lacks an explicit quantifier/domain binding or contains inconsistent references.
