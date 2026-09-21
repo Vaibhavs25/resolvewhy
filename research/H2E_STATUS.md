@@ -78,3 +78,25 @@ No maintainer response has been invented or inferred.
 **CONTINUE RESEARCH**
 
 The next technical target is to test the revised candidate-coverage/provenance contract against adversarial real-world cases before building production infrastructure.
+
+
+## Real-world trace validation — 2026-09-21
+
+A falsification-oriented corpus of 18 cases was evaluated using public pip/uv/Poetry issue reproductions plus executable pip 25.1.1 and uv 0.10.0 reductions on Linux x86_64 / Python 3.13.5.
+
+Technical findings:
+- a nontrivial transitive conflict produced an independently verified subset-minimal five-constraint UNSAT core;
+- incomplete source coverage, authentication failures, omitted Requires-Python evidence, and bounded discovery correctly block no-candidate proofs;
+- marker-conditioned dependencies, prerelease policy, Requires-Python, platform artifacts, VCS/direct identity, yanks, source-specific behavior, and universal Python splits are representable without flattening them into universal clauses;
+- one concrete unsafe adapter normalization was identified: erasing an inactive marker and copying a resolver-native conflict as universal UNSAT. The revised contract rejects this, so no schema revision was required;
+- no tested case forced an unrepresentable semantic fact.
+
+### H2 status after real-world validation
+
+- **H2a:** SUPPORTED narrowly; real-world resolver/provider layers expose structured semantic evidence, though exposure is uneven.
+- **H2b:** PARTIALLY SUPPORTED; the revised semantic model remains safe on the tested complex cases.
+- **H2c:** SUPPORTED for the tested reduced real-world pattern; independent verification and subset-minimality remain possible.
+- **H2d:** **UNPROVEN**; this experiment does not establish a stable portable cross-resolver interchange interface.
+- **H2e:** **NOT TESTED**; there are still **0 substantive maintainer responses**.
+
+The real-world result therefore strengthens technical feasibility evidence without changing the separate maintainer-validation gate.
