@@ -212,7 +212,7 @@ def base_trace():
       'resolution_policy':{'prerelease':'disallow','source_selection':'fixed'},
       'candidate_domains':[{'id':'domain:x','candidate_ids':['x@1','x@2'],'scope':{'sources':['index:A']},'coverage':{'status':'complete','attestation':{'kind':'authoritative_finite_domain','evidence_refs':['obs:x']}}}],
       'semantic_constraints':[{'id':'c:root','kind':'requirement','source_ref':'root:a'},{'id':'c:dep','kind':'dependency','source_ref':'dep:a-x'}],
-      'provenance':[{'id':'p:root','premise_refs':['c:root'],'source_refs':['root:a'],'evidence_refs':['obs:root'],'claim':'root requirement'},{'id':'p:dep','premise_refs':['c:dep'],'evidence_refs':['obs:dep'],'claim':'dependency metadata'},{'id':'p:domain','premise_refs':['obs:x'],'evidence_refs':['obs:x'],'claim':'candidate domain complete'}],
+      'provenance':[{'id':'p:root','premise_refs':['c:root'],'source_refs':['root:a'],'evidence_refs':['obs:root'],'claim':'root requirement'},{'id':'p:dep','premise_refs':['c:dep'],'source_refs':['dep:a-x'],'evidence_refs':['obs:dep'],'claim':'dependency metadata'},{'id':'p:domain','premise_refs':['obs:x'],'evidence_refs':['obs:x'],'claim':'candidate domain complete'}],
       'evidence_state':{'overall':'known'},
       'proof_claim':{'id':'claim:1','kind':'satisfiability','quantifier':'universal','evaluation_domain_ref':'evaluation_domain','status_claim':'UNSAT','premise_refs':['c:root','c:dep']},
       'claimed_core':['c:root','c:dep']
