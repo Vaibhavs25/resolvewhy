@@ -93,19 +93,18 @@ However, native incompatibility structures, decision levels, backjump state, pro
 
 ## 9. Trace-only proof artifact
 
-The final trace-only experiment establishes a bounded self-contained proof-artifact result.
+The historical full-corpus experiment recorded:
 
-Recorded outcomes:
+- 18/18 serialized corpus cases matched the intended trace-only classification;
+- 18/18 serialization round-trips preserved the semantic result;
+- 18/18 isolated replay processes completed without resolver/provider/index/network/external-state access;
+- 2 nontrivial subset-minimal UNSAT proofs were independently reconstructed from serialized traces alone;
+- 250 deterministic serialization mutations produced 0 incorrectly accepted verified proofs;
+- an extended 256-world post-repair projection search produced 0 semantic collisions.
 
-- 18/18 serialized corpus cases matched the intended trace-only classification.
-- 18/18 serialization round-trips preserved the semantic result.
-- 18/18 isolated replay processes completed without resolver/provider/index/network/external-state access.
-- 2 nontrivial subset-minimal UNSAT proofs were independently reconstructed from serialized traces alone in the historical full-corpus record; the current executable runner rechecks one committed finite proof fixture.
-- 250 deterministic serialization mutations produced 0 incorrectly accepted verified proofs.
-- the historical extended search reported 256 post-repair projection worlds with 0 semantic collisions; the current committed projection harness independently regenerates a 64-world subset and reports 0 post-repair collisions there.
-- the declared resolver-result label was not trusted over independently reconstructed semantics.
+The current clean executable runner regenerates the finite committed verifier checks, one executable subset-minimal proof fixture, exactly 250 deterministic mutation cases, and the current 64-world projection harness. It does not regenerate the historical 18-case serialized corpus or the historical 256-world extended search.
 
-These counts are deliberately separated into executable and historical evidence in `research/REPRODUCIBILITY_INDEX.md`; none is presented as exhaustive testing of the semantic space.
+These are research-boundary counts, not universal or exhaustive guarantees. See `research/REPRODUCIBILITY_INDEX.md`.
 
 ## 10. Final semantic boundary
 
