@@ -96,6 +96,8 @@ def mutation_campaign(v):
     false_accepts = sum(r[3] in {"VERIFIED_SAT", "VERIFIED_UNSAT"} for r in results)
     require("zero mutation false accepts", false_accepts == 0)
     require("proof-premise mutation family executed", "proof_premises" in {x[1] for x in results})
+    families={x[1] for x in results}
+    require("mutation taxonomy coverage", set(taxonomy).issubset(families))
     return len(results), false_accepts
 
 
