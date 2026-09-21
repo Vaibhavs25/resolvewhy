@@ -148,3 +148,15 @@ The technical validation program now reports a bounded positive result: the trac
 H2d is **PARTIALLY SUPPORTED**. H2e remains **NOT TESTED**; there is no substantive maintainer feedback to incorporate.
 
 The RFC remains an experimental research artifact. Its original illustrative model is retained as historical context; the later research documents are authoritative for the current semantic boundary and validation status.
+
+## Current-status marker — 2026-09-21
+
+The original H2 table above is historical draft state. The current research status is defined by the later research records:
+
+- H2a: SUPPORTED narrowly
+- H2b: PARTIALLY SUPPORTED
+- H2c: SUPPORTED for the tested fragment
+- H2d: PARTIALLY SUPPORTED
+- H2e: NOT TESTED
+
+The revised schema and proof-artifact requirements are documented in `research/REVISED_TRACE_SCHEMA.md` and `research/TRACE_PROOF_ARTIFACT_SPEC.md`. The clean executable reproducibility boundary is documented in `research/REPRODUCIBILITY_INDEX.md`.
