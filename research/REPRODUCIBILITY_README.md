@@ -8,13 +8,13 @@ The suite is hermetic for the finite fixture verifier and collision/mutation cam
 
 ## Current executable claims
 
-The committed runner must compute, rather than print as constants:
+The committed runner computes, rather than hard-coding, the following:
 
-- the finite trace-only verifier checks;
-- the deterministic 250-case mutation campaign;
+- finite trace-only verifier checks;
+- exactly 250 distinct structural mutation cases;
 - the extended 256-world projection search;
-- the executable subset-minimality checks in the committed fixtures;
-- hermetic replay of the verifier process.
+- executable subset-minimality checks in the committed fixture;
+- hermetic verifier replay.
 
 The 18-case corpus replay and its 18/18 round-trip/isolation figures are committed research fixture results. They are not fresh resolver executions of all 18 historical cases.
 
