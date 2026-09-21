@@ -299,3 +299,16 @@ This completes the requested trace-only boundary test for the declared finite se
 - Production architecture remains **NOT APPROVED**.
 
 No new schema field was required after proof-claim binding was repaired.
+## Final semantic-boundary audit — 2026-09-21
+
+The final adversarial semantic-boundary/generalization audit found no new semantic defect within the already declared finite portable fragment.
+
+The boundary is now explicitly recorded in:
+- research/FINAL_SEMANTIC_BOUNDARY.md
+- research/BOUNDARY_CASES.md
+
+The audit identifies the nearest realistic cases outside the established guarantee as dynamic build-time metadata generation and hidden build-environment effects, complete lockfile/hash semantics, arbitrary virtual/provided-package satisfaction relations, and symbolic/infinite environment-domain reasoning. These are evidence boundaries, not demonstrated schema defects.
+
+No schema change was made.
+
+H2e remains NOT TESTED and is unaffected by this technical experiment.
