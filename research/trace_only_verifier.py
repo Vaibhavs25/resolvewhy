@@ -2,8 +2,17 @@ import copy, json, os, subprocess, sys, tempfile
 from pathlib import Path
 
 OPS = {'==':lambda a,b:a==b,'!=':lambda a,b:a!=b,'<':lambda a,b:a<b,'<=':lambda a,b:a<=b,'>':lambda a,b:a>b,'>=':lambda a,b:a>=b}
-def ver(v): return tuple(int(x) for x in v.split('.'))
-def satv(v, op, rhs): return OPS[op](ver(v),ver(rhs))
+def ver(v):
+    try:
+        parts=tuple(int(x) for x in v.split('.'))
+        if len(parts)!=3:
+            raise ValueError
+        return parts
+    except (ValueError, AttributeError):
+        raise ValueError(f'unsupported version: {v!r}')
+
+def satv(v, op, rhs):
+    return OPS[op](ver(v),ver(rhs))
 
 # EXECUTABLE BOUNDARY: this research verifier intentionally implements only the finite fixture fragment below.
 # Unsupported marker grammars, artifact-selection/build semantics, lockfile semantics,
@@ -153,7 +162,8 @@ def verify(t):
         if not branch_ref or branch_ref not in {e.get('id') for e in t['evaluation_domain']}:
             return 'INVALID_TRACE','branch claim lacks valid branch_ref'
         selected=[x for x in t['evaluation_domain'] if x.get('id')==branch_ref]
-        return ('VERIFIED_SAT',[branch_sat(t,selected[0])]) if branch_sat(t,selected[0]) else ('VERIFIED_UNSAT',[branch_sat(t,selected[0])])
+        result=branch_sat(t,selected[0])
+        return ('VERIFIED_SAT',[result]) if result else ('VERIFIED_UNSAT',[result])
     return 'INVALID_TRACE','unsupported trace scope'
 
 def sat_fixture():
