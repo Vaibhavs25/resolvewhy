@@ -104,6 +104,15 @@ def verify(t):
         return ('VERIFIED_SAT',results) if any(results) else ('VERIFIED_UNSAT',results)
     return 'INSUFFICIENT_EVIDENCE','branch scope requires explicit branch selector'
 
+def sat_fixture():
+    t=base_trace()
+    t['dependencies']=[]
+    t['trace_scope']='existential'
+    t['proof_claim']['quantifier']='existential'
+    t['proof_claim']['status_claim']='SAT'
+    t['claimed_core']=[]
+    t['proof_claim']['premise_refs']=['c:root']
+    return t
 def base_trace():
     return {
       'schema':'resolvewhy-trace/research-2026', 'trace_scope':'universal',
