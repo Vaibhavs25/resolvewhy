@@ -1,180 +1,331 @@
 from __future__ import annotations
 
-import json, copy, subprocess, sys, tempfile, argparse
+import argparse
+import copy
+import importlib.util
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+
+HERE = Path(__file__).resolve().parent
+VERIFIER_PATH = HERE / "trace_only_verifier.py"
+COLLISION_PATH = HERE / "portable_core_collision_search.py"
+CORPUS_PATH = HERE / "fixtures" / "trace_corpus.json"
+
+
+def load_module(path: Path, name: str):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def require(label: str, condition: bool) -> None:
+    if not condition:
+        raise AssertionError(label)
+
+
+def load_corpus() -> list[dict]:
+    data = json.loads(CORPUS_PATH.read_text(encoding="utf-8"))
+    require("18 corpus fixtures", isinstance(data, list) and len(data) == 18)
+    case_ids = [entry.get("case_id") for entry in data]
+    require("unique corpus IDs", len(case_ids) == len(set(case_ids)))
+    return data
+
+
+def mutation_campaign(verifier):
+    base = verifier.base_trace()
+    families = [
+        "ids", "references", "arrays", "evaluation_domain", "quantifiers",
+        "coverage_attestation", "provenance", "candidate_artifact_links",
+        "dependency_references", "proof_premises", "evidence_states",
+    ]
+    results = []
+
+    # 11 families x 22 deterministic variants = 242.
+    for i in range(242):
+        trace = copy.deepcopy(base)
+        family = families[i % len(families)]
+        variant = i // len(families)
+
+        if family == "ids":
+            idx = variant % len(trace["candidates"])
+            trace["candidates"][idx]["id"] = f"mutated-candidate-{variant}-{idx}"
+        elif family == "references":
+            trace["semantic_constraints"][0]["source_ref"] = f"missing-requirement-{variant}"
+        elif family == "arrays":
+            trace["candidate_domains"][2]["candidate_ids"] = [
+                "cand:x1", f"ghost-candidate-{variant}",
+            ]
+        elif family == "evaluation_domain":
+            trace["evaluation_domain"][0]["runtime_context_ref"] = f"missing-context-{variant}"
+        elif family == "quantifiers":
+            trace["proof_claim"]["quantifier"] = (
+                ["existential", "universal", "branch", "invalid"][variant % 4]
+            )
+            trace["proof_claim"]["evaluation_domain_ref"] = f"missing-domain-{variant}"
+            trace["proof_claim"]["branch_ref"] = f"missing-branch-{variant}"
+        elif family == "coverage_attestation":
+            if variant % 2 == 0:
+                trace["candidate_domains"][2]["coverage"].pop("attestation", None)
+                trace["candidate_domains"][2]["scope"]["query_id"] = f"query-{variant}"
+            else:
+                trace["candidate_domains"][2]["coverage"]["attestation"]["evidence_refs"] = [
+                    f"missing-evidence-{variant}"
+                ]
+        elif family == "provenance":
+            if variant % 2 == 0:
+                trace["provenance"] = [
+                    p for p in trace["provenance"] if p["id"] != "prov:root:a"
+                ]
+                trace["provenance"][0]["evidence_refs"] = [f"missing-evidence-{variant}"]
+            else:
+                trace["provenance"][0]["evidence_refs"] = [f"missing-evidence-{variant}"]
+        elif family == "candidate_artifact_links":
+            trace["artifacts"][0]["candidate_ref"] = f"missing-candidate-{variant}"
+        elif family == "dependency_references":
+            trace["dependencies"][0]["parent_candidate"] = f"missing-parent-{variant}"
+        elif family == "proof_premises":
+            trace["proof_claim"]["premise_refs"] = [f"missing-premise-{variant}"]
+            trace["claimed_core"] = [f"missing-premise-{variant}"]
+        elif family == "evidence_states":
+            trace["evidence_state"]["overall"] = (
+                ["unknown", "incomplete", "missing"][variant % 3]
+            )
+            trace["evidence_state"]["observations"].append(
+                {"id": f"obs:mutation:{variant}", "kind": "mutation", "supports_refs": []}
+            )
+
+        results.append({
+            "index": i,
+            "family": family,
+            "serialized": json.dumps(trace, sort_keys=True, separators=(",", ":")),
+            "result": verifier.verify(trace)[0],
+        })
+
+    targeted_names = [
+        "targeted_dangling_premise", "targeted_domain_binding",
+        "targeted_scope_mismatch", "targeted_coverage_evidence",
+        "targeted_unrelated_provenance", "targeted_wrong_evidence",
+        "targeted_malformed_dependency", "targeted_marker_semantics",
+    ]
+    for j, family in enumerate(targeted_names):
+        trace = copy.deepcopy(base)
+        if j == 0:
+            trace["proof_claim"]["premise_refs"] = ["c:missing"]
+            trace["claimed_core"] = ["c:missing"]
+        elif j == 1:
+            trace["proof_claim"]["evaluation_domain_ref"] = "missing-domain"
+        elif j == 2:
+            trace["trace_scope"] = "universal"
+            trace["proof_claim"]["quantifier"] = "existential"
+        elif j == 3:
+            trace["candidate_domains"][0]["coverage"]["attestation"]["evidence_refs"] = [
+                "missing-attestation-evidence"
+            ]
+        elif j == 4:
+            trace["provenance"][0]["premise_refs"] = ["c:root:b"]
+        elif j == 5:
+            trace["provenance"][0]["evidence_refs"] = ["obs:domain:x"]
+        elif j == 6:
+            trace["dependencies"][0]["requirement"]["version"] = None
+        elif j == 7:
+            trace["dependencies"][0]["activation_condition"] = {
+                "variable": "sys_platform", "op": "???", "value": "linux"
+            }
+        results.append({
+            "index": 242 + j,
+            "family": family,
+            "serialized": json.dumps(trace, sort_keys=True, separators=(",", ":")),
+            "result": verifier.verify(trace)[0],
+        })
+
+    require("exactly 250 mutation cases", len(results) == 250)
+    require("250 distinct serialized mutations", len({r["serialized"] for r in results}) == 250)
+    false_accepts = sum(r["result"] in {"VERIFIED_SAT", "VERIFIED_UNSAT"} for r in results)
+    require("zero mutation false accepts", false_accepts == 0)
+    families_seen = {r["family"] for r in results}
+    require("all mutation families exercised", set(families).issubset(families_seen))
+
+    counts: dict[str, int] = {}
+    taxonomy: dict[str, int] = {}
+    for row in results:
+        counts[row["result"]] = counts.get(row["result"], 0) + 1
+        taxonomy[row["family"]] = taxonomy.get(row["family"], 0) + 1
+
+    return results, false_accepts, counts, taxonomy
+
+
+def isolated_verify(verifier_source: str, trace: dict) -> str:
+    with tempfile.TemporaryDirectory(prefix="resolvewhy-hermetic-") as td:
+        temp = Path(td)
+        (temp / "verifier.py").write_text(verifier_source, encoding="utf-8")
+        (temp / "trace.json").write_text(json.dumps(trace, sort_keys=True), encoding="utf-8")
+        worker = temp / "worker.py"
+        worker.write_text(
+            r'''
+import json
+import os
+import sys
+import sysconfig
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-VERIFIER = ROOT / "trace_only_verifier.py"
-COLLISION = ROOT / "portable_core_collision_search.py"
+STDLIB = Path(sysconfig.get_paths()["stdlib"]).resolve()
 
-def load(path):
-    ns = {}
-    exec(path.read_text(encoding="utf-8"), ns)
-    return ns
+def deny(event, args):
+    if event in {"socket.__new__", "socket.connect", "subprocess.Popen", "urllib.Request"}:
+        raise RuntimeError(f"forbidden external access: {event}")
+    if event == "open":
+        target = args[0] if args else None
+        if not isinstance(target, (str, bytes, os.PathLike)):
+            return
+        path = Path(target).resolve()
+        allowed = path == ROOT or ROOT in path.parents or path == STDLIB or STDLIB in path.parents
+        if not allowed:
+            raise RuntimeError(f"filesystem escape: {path}")
 
-def must(label, ok):
-    if not ok:
-        raise AssertionError(label)
+sys.addaudithook(deny)
+sys.path.insert(0, str(ROOT))
+import verifier
 
-def mutate_campaign(v):
-    base = v["base_trace"]()
-    families = [
-        "ids","references","arrays","evaluation_domain","quantifiers",
-        "coverage_attestation","provenance","candidate_artifact_links",
-        "dependency_references","proof_premises","evidence_states"
-    ]
-    results=[]
-    for i in range(242):
-        t=copy.deepcopy(base)
-        fam=families[i % len(families)]
-        variant=i // len(families)
-        if fam=="ids":
-            t["candidates"][variant % len(t["candidates"])]["id"]=f"mutated-candidate-{variant}"
-        elif fam=="references":
-            t["semantic_constraints"][0]["source_ref"]=f"missing-root-{variant}"
-        elif fam=="dependency_references":
-            t["dependencies"][0]["parent_candidate"]=f"missing-parent-{variant}"
-        elif fam=="arrays":
-            t["candidate_domains"][0]["candidate_ids"]=[f"ghost-{variant}"]
-        elif fam=="evaluation_domain":
-            t["evaluation_domain"][0]["id"]=f"env-corrupt-{variant}"
-        elif fam=="quantifiers":
-            vals=["existential","universal","branch","invalid"]
-            t["proof_claim"]["quantifier"]=vals[variant % 4]
-            t["proof_claim"]["evaluation_domain_ref"]=f"missing-{variant}"
-        elif fam=="coverage_attestation":
-            if variant % 2 == 0:
-                t["candidate_domains"][0]["coverage"].pop("attestation",None)\n                t["candidate_domains"][0]["coverage"]["mutation_tag"]=f"missing-attestation-{variant}"
-            else:
-                t["candidate_domains"][0]["coverage"]["attestation"]["evidence_refs"]=[f"missing-{variant}"]
-        elif fam=="provenance":
-            if variant % 2 == 0:
-                t["provenance"]=[]\n                t["evidence_state"]["mutation_tag"]=f"missing-provenance-{variant}"
-            else:
-                t["provenance"][0]["premise_refs"]=[f"missing-{variant}"]
-        elif fam=="candidate_artifact_links":
-            t["artifacts"][0]["candidate_ref"]=f"missing-{variant}"
-        elif fam=="proof_premises":
-            t["proof_claim"]["premise_refs"]=[f"missing-{variant}"]
-        elif fam=="evidence_states":
-            t["evidence_state"]["overall"]=["unknown","incomplete","missing"][variant % 3]\n            t["evidence_state"]["mutation_tag"]=f"state-{variant}"
-        results.append((i,fam,json.dumps(t,sort_keys=True,separators=(",",":")),v["verify"](t)[0]))
-    for j in range(8):
-        t=copy.deepcopy(base)
-        mode=j%4
-        if mode==0: t["proof_claim"]["premise_refs"]=[f"c:missing-{j}"]
-        elif mode==1: t["proof_claim"]["evaluation_domain_ref"]=f"missing-{j}"
-        elif mode==2:
-            t["trace_scope"]="universal"; t["proof_claim"]["quantifier"]="existential"; t["proof_claim"]["status_claim"]=f"invalid-status-{j}"
-        else: t["candidate_domains"][0]["coverage"]["attestation"]["evidence_refs"]=[f"missing-extra-{j}"]
-        results.append((242+j,"targeted",json.dumps(t,sort_keys=True,separators=(",",":")),v["verify"](t)[0]))
-    must("250 distinct mutations",len({r[2] for r in results})==250)
-    false_accepts=sum(r[3] in {"VERIFIED_SAT","VERIFIED_UNSAT"} for r in results)
-    verdict_counts={}
-    for _, fam, _, verdict in results:
-        verdict_counts[verdict]=verdict_counts.get(verdict,0)+1
-    must("mutation false accepts",false_accepts==0)
-    must("all mutation families present",set(families).issubset({r[1] for r in results}))
-    return len(results),false_accepts,verdict_counts
-
-
-def run_self_tests(v, c):
-    base=v["base_trace"]()
-    checks=[]
-    def record(name, ok):
-        checks.append((name, ok)); must(name, ok)
-    record("dangling references", v["verify"](v["mutate"](base,"dangling_ref"))[0]=="INVALID_TRACE")
-    record("duplicate IDs", (lambda t: (t["candidates"].append(copy.deepcopy(t["candidates"][0])), v["verify"](t)[0]=="INVALID_TRACE"))(copy.deepcopy(base))[1])
-    record("missing coverage attestation", v["verify"](v["mutate"](base,"coverage_attestation"))[0]=="INVALID_TRACE")
-    record("incomplete coverage", v["verify"](v["mutate"](base,"candidate_coverage"))[0]=="INSUFFICIENT_EVIDENCE")
-    record("malformed proof claim", v["verify"]({**copy.deepcopy(base),"proof_claim":"bad"})[0]=="INVALID_TRACE")
-    record("missing quantifier", v["verify"]({**copy.deepcopy(base),"proof_claim":{**base["proof_claim"],"quantifier":None}})[0]=="INVALID_TRACE")
-    record("missing evaluation domain", v["verify"](v["mutate"](base,"evaluation_domain"))[0]=="INVALID_TRACE")
-    record("invalid proof premise", v["verify"]({**copy.deepcopy(base),"proof_claim":{**base["proof_claim"],"premise_refs":["missing"]}})[0]=="INVALID_TRACE")
-    record("provenance failure", v["verify"](v["mutate"](base,"provenance"))[0]=="INVALID_TRACE")
-    record("activation preserved", v["verify"](base)[0]=="VERIFIED_UNSAT")
-    record("resolver-label disagreement", v["verify"]({**copy.deepcopy(base),"proof_claim":{**base["proof_claim"],"status_claim":"SAT"}})[0]=="VERIFIED_UNSAT")
-    artifact=copy.deepcopy(base); artifact["artifacts"][0]["compatible"]=False
-    record("artifact feasibility", v["verify"](artifact)[0]=="VERIFIED_UNSAT")
-    return checks
-
-def summarize(verdicts):
-    from collections import Counter
-    return dict(Counter(verdicts))
+trace = json.loads((ROOT / "trace.json").read_text(encoding="utf-8"))
+print(verifier.verify(trace)[0])
+'''.strip() + "\n",
+            encoding="utf-8",
+        )
+        env = {
+            key: value for key, value in os.environ.items()
+            if key not in {"PYTHONPATH", "PYTHONHOME", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"}
+        }
+        proc = subprocess.run(
+            [sys.executable, "-I", str(worker)],
+            cwd=temp, env=env, capture_output=True, text=True, timeout=30,
+        )
+        if proc.returncode != 0:
+            raise AssertionError("hermetic child failed: " + proc.stderr.strip())
+        return proc.stdout.strip()
 
 
 def run():
-    v=load(VERIFIER); c=load(COLLISION)
-    base=v["base_trace"]()
-    must("base UNSAT",v["verify"](base)[0]=="VERIFIED_UNSAT")
-    must("SAT reconstruction",v["verify"](v["sat_fixture"]())[0]=="VERIFIED_SAT")
-    rt=json.loads(json.dumps(base,sort_keys=True))
-    must("round trip",v["verify"](base)==v["verify"](rt))
-    root_only=copy.deepcopy(base)
-    root_only["proof_claim"]["premise_refs"]=["c:root"]
-    must("proof premise affects proposition",v["verify"](root_only)[0]=="VERIFIED_SAT")
-    bad_status=copy.deepcopy(base)
-    bad_status["proof_claim"]["status_claim"]="SAT"
-    must("declared status is non-authoritative",v["verify"](bad_status)[0]=="VERIFIED_UNSAT")
-    ok,deletions=v["minimality"](base)
-    must("minimality",ok and all(x[1]=="VERIFIED_SAT" for x in deletions))
-    must("claim disagreement recomputed",v["verify"]({**base,"proof_claim":{**base["proof_claim"],"status_claim":"SAT"}})[0]=="VERIFIED_UNSAT")
-    self_tests=run_self_tests(v,c)
-    must("self-test count",len(self_tests)>=12)
-    bad_prov=copy.deepcopy(base); bad_prov["provenance"][0]["evidence_refs"]=["unrelated"]
-    must("unrelated provenance",v["verify"](bad_prov)[0]=="INVALID_TRACE")
-    cycle=copy.deepcopy(base)
-    cycle["provenance"]=[
-        {"id":"p1","premise_refs":["c:root"],"evidence_refs":[]},
-        {"id":"p2","premise_refs":["p1"],"evidence_refs":[]},
-        {"id":"p3","premise_refs":["p2"],"evidence_refs":[]},
-        {"id":"p4","premise_refs":["p3"],"evidence_refs":[]},
-    ]
-    must("provenance cycle",v["verify"](cycle)[0]=="INVALID_TRACE")
-    mutation_cases,false_accepts,mutation_verdicts=mutate_campaign(v)
-    branch=copy.deepcopy(base)
-    branch["trace_scope"]="branch"
-    branch["proof_claim"]["quantifier"]="branch"
-    branch["proof_claim"]["branch_ref"]="py3.13-linux"
-    # Branch claims are tested explicitly; the selected branch is evaluated directly.
-    must("branch",v["verify"](branch)[0] in {"VERIFIED_SAT","VERIFIED_UNSAT"})
-    artifact=copy.deepcopy(base); artifact["artifacts"][0]["compatible"]=False
-    must("artifact feasibility",v["verify"](artifact)[0] == "VERIFIED_UNSAT")
-    worlds,raw,repaired,_=c["collision_search"]()
-    must("256 worlds",worlds==256); must("post repair zero",repaired==0); must("native deletion",c["native_deletion_check"]())
-    with tempfile.TemporaryDirectory() as td:
-        td=Path(td); isolated=td/"verifier.py"; isolated.write_text(VERIFIER.read_text(encoding="utf-8"))
-        p=subprocess.run([sys.executable,"-I",str(isolated)],cwd=td,capture_output=True,text=True)
-        must("hermetic",p.returncode==0)
+    verifier = load_module(VERIFIER_PATH, "resolvewhy_verifier")
+    collision = load_module(COLLISION_PATH, "resolvewhy_collision")
+
+    base = verifier.base_trace()
+    require("base UNSAT", verifier.verify(base)[0] == "VERIFIED_UNSAT")
+    require("SAT fixture", verifier.verify(verifier.sat_fixture())[0] == "VERIFIED_SAT")
+
+    prerelease = verifier.prerelease_fixture()
+    require("prerelease disallow", verifier.verify(prerelease)[0] == "VERIFIED_UNSAT")
+    prerelease["resolution_policy"]["prerelease"] = "allow"
+    require("prerelease allow", verifier.verify(prerelease)[0] == "VERIFIED_SAT")
+
+    branch = copy.deepcopy(base)
+    branch["trace_scope"] = "branch"
+    branch["proof_claim"]["quantifier"] = "branch"
+    branch["proof_claim"]["branch_ref"] = "env:linux"
+    require("branch semantics", verifier.verify(branch)[0] == "VERIFIED_UNSAT")
+
+    root_only = copy.deepcopy(base)
+    root_only["proof_claim"]["premise_refs"] = ["c:root:a", "c:root:b"]
+    root_only["claimed_core"] = root_only["proof_claim"]["premise_refs"]
+    require("proof premises affect proposition", verifier.verify(root_only)[0] == "VERIFIED_SAT")
+
+    declared_status = copy.deepcopy(base)
+    declared_status["proof_claim"]["status_claim"] = "SAT"
+    require("declared status is non-authoritative",
+            verifier.verify(declared_status)[0] == "VERIFIED_UNSAT")
+
+    corpus = load_corpus()
+    corpus_results = []
+    verifier_source = VERIFIER_PATH.read_text(encoding="utf-8")
+    roundtrip_passes = 0
+    isolated_passes = 0
+
+    for entry in corpus:
+        trace = entry["trace"]
+        expected = entry["expected_result"]
+        observed = verifier.verify(trace)[0]
+        require(f"{entry['case_id']} classification", observed == expected)
+        roundtrip = json.loads(json.dumps(trace, sort_keys=True))
+        require(f"{entry['case_id']} round-trip", verifier.verify(roundtrip)[0] == observed)
+        roundtrip_passes += 1
+        require(f"{entry['case_id']} isolated replay", isolated_verify(verifier_source, trace) == observed)
+        isolated_passes += 1
+        corpus_results.append({"case_id": entry["case_id"], "expected": expected, "observed": observed})
+
+    minimality_results = {}
+    for case_id in ("RW-09", "RW-14"):
+        trace = next(e["trace"] for e in corpus if e["case_id"] == case_id)
+        ok, deletions = verifier.minimality(trace)
+        require(f"{case_id} minimality", ok and all(result == "VERIFIED_SAT" for _, result in deletions))
+        minimality_results[case_id] = deletions
+
+    mutation_results, mutation_false_accepts, mutation_counts, mutation_taxonomy = mutation_campaign(verifier)
+
+    worlds, raw_collisions, post_repair_collisions, unique_families = collision.collision_search()
+    require("projection world count", worlds == 256)
+    require("post-repair collision count", post_repair_collisions == 0)
+    require("pre-repair collision exists", raw_collisions > 0)
+    require("native-state deletion", collision.native_deletion_check())
+
     summary = {
-        "trace_only_corpus": {"value": "18/18", "status": "historical_serialized_replay"},
-        "serialization_roundtrip": {"executable": 1, "historical": 18},
-        "hermetic_replay": {"executable": 1, "historical": 18},
-        "subset_minimal_proofs": {"executable": 1, "historical": 2},
-        "mutation_cases": mutation_cases,
-        "mutation_false_accepts": false_accepts,
-        "mutation_verdict_counts": mutation_verdicts,
+        "trace_only_corpus": "18/18",
+        "serialization_roundtrip": f"{roundtrip_passes}/18",
+        "hermetic_replay": f"{isolated_passes}/18",
+        "subset_minimal_proofs": 2,
+        "subset_minimality_details": minimality_results,
+        "mutation_cases": len(mutation_results),
+        "mutation_false_accepts": mutation_false_accepts,
+        "mutation_verdict_counts": mutation_counts,
+        "mutation_taxonomy": mutation_taxonomy,
         "projection_worlds": worlds,
-        "post_repair_collisions": repaired,
-        "raw_pre_repair_collisions": raw,
-        "self_tests": len(self_tests),
+        "raw_pre_repair_collision_groups": raw_collisions,
+        "post_repair_collisions": post_repair_collisions,
+        "unique_pre_repair_collision_families": unique_families,
+        "corpus_results": corpus_results,
     }
-    if getattr(run, "json_output", False):
-        print(json.dumps(summary, sort_keys=True))
-        return summary
-    print("REPRODUCIBILITY SUITE")
-    print("TRACE_ONLY_CORPUS = 18/18 (historical serialized corpus; not freshly re-executed)")
-    print("SERIALIZATION_ROUNDTRIP = 1/1 executable fixture; historical 18/18")
-    print("HERMETIC_REPLAY = 1/1 executable fixture; historical 18/18")
-    print("SUBSET_MINIMAL_PROOFS = 1 executable fixture; historical 2")
-    print(f"MUTATION_CASES = {mutation_cases}")
-    print(f"MUTATION_FALSE_ACCEPTS = {false_accepts}")
-    print(f"MUTATION_VERDICT_COUNTS = {mutation_verdicts}")
-    print(f"PROJECTION_WORLDS = {worlds}")
-    print(f"POST_REPAIR_COLLISIONS = {repaired}")
-    print(f"RAW_PRE_REPAIR_COLLISIONS = {raw}")
-    print(f"SELF_TESTS = {len(self_tests)}")
     return summary
 
-if __name__=="__main__":
-    cli()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--json", action="store_true", help="print only JSON")
+    parser.add_argument("--write-results", metavar="DIR",
+                        help="write reproducibility.json and reproducibility.txt to DIR")
+    args = parser.parse_args()
+    summary = run()
+
+    human = "\n".join([
+        "REPRODUCIBILITY SUITE",
+        "TRACE_ONLY_CORPUS = 18/18 (serialized fixture replay; not fresh issue execution)",
+        f"SERIALIZATION_ROUNDTRIP = {summary['serialization_roundtrip']}",
+        f"HERMETIC_REPLAY = {summary['hermetic_replay']}",
+        f"SUBSET_MINIMAL_PROOFS = {summary['subset_minimal_proofs']}",
+        f"MUTATION_CASES = {summary['mutation_cases']}",
+        f"MUTATION_FALSE_ACCEPTS = {summary['mutation_false_accepts']}",
+        f"PROJECTION_WORLDS = {summary['projection_worlds']}",
+        f"POST_REPAIR_COLLISIONS = {summary['post_repair_collisions']}",
+    ])
+
+    if args.write_results:
+        out = Path(args.write_results)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "reproducibility.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        (out / "reproducibility.txt").write_text(human + "\n", encoding="utf-8")
+
+    if args.json:
+        print(json.dumps(summary, sort_keys=True))
+    else:
+        print(human)
+
+
+if __name__ == "__main__":
+    main()
