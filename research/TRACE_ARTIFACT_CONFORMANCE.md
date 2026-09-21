@@ -1,3 +1,9 @@
+The 18/18, 2-proof, and 256-world figures in this section are retained as historical research evidence. The current clean executable runner does not regenerate the full 18-case fixture set or the 256-world extended search; see research/REPRODUCIBILITY_INDEX.md for the exact executable boundary.
+
+## Reproducibility boundary note
+
+The current committed runner regenerates one finite verifier fixture, its round-trip and hermetic replay, its subset-minimality checks, a deterministic 250-case mutation campaign, and the current 64-world projection harness. It must not be read as a fresh regeneration of the historical 18-case or 256-world figures.
+
 # Trace Artifact Conformance
 
 **Date:** 2026-09-21  
