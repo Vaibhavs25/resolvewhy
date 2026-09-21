@@ -17,6 +17,14 @@ The current production package contains typed semantic domain objects and struct
 
 See `docs/PRODUCTION_SEMANTIC_CORE.md` and `AI_BUILD_CONTEXT.md`.
 
+## Production trace format
+
+**Phase 2 — Production Trace Format:** implemented as `resolvewhy-trace/1.0`.
+
+The production trace boundary provides deterministic UTF-8 JSON serialization and safe reconstruction of the typed semantic model. Unknown schema versions, unknown fields, malformed references, invalid enums, malformed markers, and invalid proof/coverage structures are rejected; incomplete evidence remains distinguishable from invalid structure.
+
+See `docs/PRODUCTION_TRACE_FORMAT.md` and the canonical fixture at `tests/fixtures/production_trace.json`.
+
 ## Research question
 
 The project asks whether sufficiently rich structured dependency-resolution evidence can be normalized into a small semantic trace from which an independent verifier can derive a formally checked explanation without parsing human-readable diagnostics or depending on native resolver state.
