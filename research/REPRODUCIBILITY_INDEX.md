@@ -63,7 +63,7 @@ The current runner independently regenerates the 250 mutation campaign and the 2
 
 ## Important scope note
 
-`research/trace_only_verifier.py` is a research fixture verifier, not a general package-manager verifier. It intentionally implements only the finite semantic fragment used by the committed fixture. Branch scope remains conservative and returns `INSUFFICIENT_EVIDENCE` rather than pretending a generic branch selector is implemented.
+`research/trace_only_verifier.py` is a research fixture verifier, not a general package-manager verifier. It intentionally implements only the finite semantic fragment used by the committed fixture. Branch scope is implemented only through the explicit `proof_claim.branch_ref` selector within the fixture's finite evaluation domain.
 
 
 ## Final clean-run command
