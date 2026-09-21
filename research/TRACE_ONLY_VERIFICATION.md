@@ -133,3 +133,13 @@ The smallest schema-level repair is to make the proof scope explicit as semantic
 After this repair is enforced, the hermetic verifier can operate without the original resolver, provider, network, indexes, native derivations, or diagnostics for the tested finite fragment.
 
 H2e remains NOT TESTED and is unaffected.
+
+## Final boundary clarification — proof claim binding
+
+The trace-only experiment identified that proof scope must be an explicit proof-bearing semantic claim, not an inference from resolution policy plus evaluation domain. The revised schema now includes a `proof claim` concept binding the result quantifier to `evaluation_domain` and to the semantic premises being verified.
+
+The hermetic proof artifact boundary is therefore:
+
+`serialized trace -> structural validation -> proof claim binding -> semantic reconstruction -> independent SAT/UNSAT verification -> core validation`
+
+No native resolver state is consulted during these steps.
