@@ -33,15 +33,15 @@ No production adapter framework was built.
 
 ### pip / resolvelib
 
-The public `AbstractProvider` contract defines `identify`, `find_matches`, dependency access, and preference/selection hooks. `find_matches` receives requirements and known incompatibilities and returns candidates; its contract explicitly covers VCS/local/archive requirements separately from named requirements. `RequirementInformation` preserves the requirement-parent relation. citeturn246071view0turn438838view3
+The public `AbstractProvider` contract defines `identify`, `find_matches`, dependency access, and preference/selection hooks. `find_matches` receives requirements and known incompatibilities and returns candidates; its contract explicitly covers VCS/local/archive requirements separately from named requirements. `RequirementInformation` preserves the requirement-parent relation. 
 
 This makes candidate discovery and parent/dependency provenance directly observable at the provider boundary, but does not make the provider's returned candidate set automatically globally exhaustive.
 
 ### uv
 
-uv's documented resolver is PubGrub-based. Its internal model tracks incompatibilities and derives error traces; it explicitly models forking across marker/Python domains, URL dependencies, and Python compatibility. citeturn755747search0
+uv's documented resolver is PubGrub-based. Its internal model tracks incompatibilities and derives error traces; it explicitly models forking across marker/Python domains, URL dependencies, and Python compatibility. 
 
-Current uv issues also expose real cases where authentication failures, marker activation, yanked artifacts, and source/policy behavior materially affect the resolver outcome. citeturn768883search1turn768883search3turn553358search0
+Current uv issues also expose real cases where authentication failures, marker activation, yanked artifacts, and source/policy behavior materially affect the resolver outcome. 
 
 ## 3. Shared semantic test suite
 
@@ -118,11 +118,11 @@ The candidate identity remains unchanged. The policy changes.
 
 Therefore prerelease mode belongs in `resolution_policy`, not candidate identity or runtime facts.
 
-The same separation applies to yanked handling and `exclude-newer`. The uv `exclude-newer` case demonstrates that an upload-time cutoff is independent of a prerelease hint. citeturn768883search0turn768883search4
+The same separation applies to yanked handling and `exclude-newer`. The uv `exclude-newer` case demonstrates that an upload-time cutoff is independent of a prerelease hint. 
 
 ### 4.5 Activation conditions
 
-The uv `pywin32; sys_platform == "win32"` issue is the critical negative test. The native failure can be misleading for Linux, so an adapter that drops the activation marker would create a false universal clause. citeturn768883search1
+The uv `pywin32; sys_platform == "win32"` issue is the critical negative test. The native failure can be misleading for Linux, so an adapter that drops the activation marker would create a false universal clause. 
 
 The shared layer therefore requires activation conditions to remain explicit. Marker erasure is classified as unsafe normalization.
 
@@ -130,7 +130,7 @@ The shared layer therefore requires activation conditions to remain explicit. Ma
 
 Platform wheel and per-file yank cases show that artifact-level state can differ for one package/version.
 
-uv's current issue on a yanked wheel explicitly notes that the wheel URL/hash can remain while yank state is not represented in the persisted lock structure. citeturn246769search10
+uv's current issue on a yanked wheel explicitly notes that the wheel URL/hash can remain while yank state is not represented in the persisted lock structure. 
 
 The common layer therefore keeps:
 `candidate -> artifact -> artifact status/compatibility`
@@ -172,7 +172,7 @@ This demonstrates that resolver-neutrality does not require identical resolver o
 
 ### Yank policy
 
-uv can refuse a yanked dependency where pip only warns and installs it. citeturn553358search0
+uv can refuse a yanked dependency where pip only warns and installs it. 
 
 The common representation is therefore:
 - artifact/source fact: yanked
@@ -183,13 +183,13 @@ No universal UNSAT clause is created.
 
 ### Source selection
 
-Multiple-index cases show that source scope changes candidate visibility. uv's current index documentation also describes explicit behavior around authentication and index searching. citeturn768883search8
+Multiple-index cases show that source scope changes candidate visibility. uv's current index documentation also describes explicit behavior around authentication and index searching. 
 
 The source query and selected source remain provenance-bearing evidence.
 
 ### Universal/forked resolution
 
-uv explicitly forks resolution across marker/Python domains, whereas resolvelib's core abstraction is not itself a universal multi-environment fork model. The common layer can still carry a declared resolution domain and activation condition without pretending the native mechanisms are identical. citeturn755747search0
+uv explicitly forks resolution across marker/Python domains, whereas resolvelib's core abstraction is not itself a universal multi-environment fork model. The common layer can still carry a declared resolution domain and activation condition without pretending the native mechanisms are identical. 
 
 ## 6. Candidate coverage conformance
 
@@ -207,7 +207,7 @@ The following mutation tests were applied conceptually to both adapter models:
 All preserve the same rule:
 **absence of evidence is not evidence of absence.**
 
-uv's real 401/403 case is particularly useful because the issue shows a concrete distinction between index-query failure and package absence. citeturn768883search3
+uv's real 401/403 case is particularly useful because the issue shows a concrete distinction between index-query failure and package absence. 
 
 ## 7. Unsafe normalization attack
 
@@ -235,7 +235,7 @@ This is an important portability result: a common schema by itself does not guar
 
 ## 8. Poetry / Mixology source mapping
 
-Poetry's public issue corpus demonstrates first-class incompatibility derivations and Python constraints. Its Mixology failure messages distinguish causes such as package dependencies and Python incompatibilities. citeturn703071search2turn703071search5
+Poetry's public issue corpus demonstrates first-class incompatibility derivations and Python constraints. Its Mixology failure messages distinguish causes such as package dependencies and Python incompatibilities. 
 
 The safe mapping is:
 - requirement/term -> portable semantic constraint;
