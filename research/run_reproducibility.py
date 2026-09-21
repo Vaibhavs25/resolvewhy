@@ -145,6 +145,5 @@ def run():
     print(f"POST_REPAIR_COLLISIONS = {repaired}")
     print(f"RAW_PRE_REPAIR_COLLISIONS = {raw}")
     print(f"SELF_TESTS = {len(self_tests)}/{len(self_tests)}")
-    print(f"SELF_TESTS = {len(self_tests)}/{len(self_tests)}")
 if __name__=="__main__":
     run()
