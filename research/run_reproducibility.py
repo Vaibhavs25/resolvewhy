@@ -116,6 +116,11 @@ def run():
     require("deletions become SAT", all(x[1] == "VERIFIED_SAT" for x in deletion_results))
     require("reported core size", len(v["base_trace"]().get("claimed_core", [])) == 2)
 
+    # Declared claim status is deliberately non-authoritative: the verifier recomputes truth.
+    disagreement = copy.deepcopy(base)
+    disagreement["proof_claim"]["status_claim"] = "SAT"
+    require("resolver-label disagreement", v["verify"](disagreement)[0] == "VERIFIED_UNSAT")
+
     expected = {
         "coverage_attestation": "INVALID_TRACE",
         "evaluation_domain": "INVALID_TRACE",
