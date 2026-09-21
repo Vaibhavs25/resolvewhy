@@ -20,6 +20,7 @@ def structural(t):
     if not isinstance(claim.get('premise_refs'),list) or not claim.get('premise_refs'): return False,'proof claim lacks premises'
     ids=[c.get('id') for c in t['candidates']]
     if any(x is None for x in ids) or len(ids)!=len(set(ids)): return False,'invalid candidate IDs'
+    if t['trace_scope'] != claim.get('quantifier'): return False,'trace scope and proof quantifier disagree'
     aids=[a.get('id') for a in t['artifacts']]
     if any(x is None for x in aids) or len(aids)!=len(set(aids)): return False,'invalid artifact IDs'
     eids=[e.get('id') for e in t['dependencies']]
@@ -36,6 +37,24 @@ def structural(t):
         if cov.get('status')=='complete' and not isinstance(cov.get('attestation'),dict): return False,'complete coverage lacks attestation'
         if any(x not in ids for x in q.get('candidate_ids',[])): return False,'dangling coverage candidate'
     if not t['provenance']: return False,'missing provenance'
+    prov={p.get('id'):p for p in t['provenance'] if isinstance(p,dict)}
+    evidence_refs=set()
+    if isinstance(t.get('candidate_domains'),list):
+        for q in t['candidate_domains']:
+            a=q.get('coverage',{}).get('attestation',{})
+            evidence_refs.update(a.get('evidence_refs',[]) if isinstance(a,dict) else [])
+    semantic_ids={c.get('id') for c in t['semantic_constraints']}
+    claimed=set(claim.get('premise_refs',[]))
+    for sid in claimed:
+        if sid not in semantic_ids: return False,'proof premise is not a declared semantic constraint'
+        matches=[p for p in t['provenance'] if sid in p.get('premise_refs',[])]
+        if not matches: return False,'proof premise lacks provenance'
+        linked=False
+        for p in matches:
+            for ref in p.get('premise_refs',[]):
+                if ref in evidence_refs or ref in {d.get('id') for d in t['dependencies']} or ref in {r.get('id') for r in t['requirements']}:
+                    linked=True
+        if not linked: return False,'proof premise provenance lacks in-scope evidence'
     return True,'ok'
 
 def candidate_usable(c,t,env):
