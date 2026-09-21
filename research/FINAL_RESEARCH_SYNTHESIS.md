@@ -100,7 +100,7 @@ The historical full-corpus experiment recorded:
 - 18/18 isolated replay processes completed without resolver/provider/index/network/external-state access;
 - 2 nontrivial subset-minimal UNSAT proofs were independently reconstructed from serialized traces alone;
 - 250 deterministic serialization mutations produced 0 incorrectly accepted verified proofs;
-- an extended 256-world post-repair projection search produced 0 semantic collisions.
+- an extended 256-world post-repair projection search produced 0 semantic collisions in the committed harness.
 
 The current clean executable runner regenerates the finite committed verifier checks, one executable subset-minimal proof fixture, exactly 250 deterministic mutation cases, and the **extended 256-world projection harness**. It does not freshly re-execute the historical 18-case resolver corpus; that corpus remains a serialized research record.
 
