@@ -500,22 +500,6 @@ def normalize_capture(
     for native in observed_candidates:
         candidate_id(native)
 
-    for ref, view in candidate_views.items():
-        candidate_models.append(
-            Candidate(
-                id=ref,
-                package=view.package,
-                version=view.version,
-                kind=view.kind,
-                source_ref=view.source_ref,
-                origin=(
-                    view.origin
-                    if view.kind is not CandidateKind.REGISTRY
-                    else None
-                ),
-            )
-        )
-
 
     requirement_events: list[RequirementEvent[object, object]] = list(buffer.requirements)
     dependency_events: list[DependencyEvent[object, object]] = list(buffer.dependencies)
@@ -987,6 +971,24 @@ def normalize_capture(
         kind=EvaluationDomainKind.SINGLETON_ENVIRONMENT,
         environment_refs=(context.runtime_context.id,),
     )
+
+    # Materialize candidate model objects only after all normalization passes.
+    # Explicit requirements can reveal additional candidates through get_candidate_lookup().
+    candidate_models = [
+        Candidate(
+            id=ref,
+            package=view.package,
+            version=view.version,
+            kind=view.kind,
+            source_ref=view.source_ref,
+            origin=(
+                view.origin
+                if view.kind is not CandidateKind.REGISTRY
+                else None
+            ),
+        )
+        for ref, view in candidate_views.items()
+    ]
 
     return Trace(
         schema="resolvewhy-trace/1.0",
