@@ -17,6 +17,7 @@ def load(name: str, filename: str):
 verifier = load("resolvewhy_trace_only_verifier", "trace_only_verifier.py")
 collision = load("resolvewhy_collision_search", "portable_core_collision_search.py")
 runner = load("resolvewhy_repro_runner", "run_reproducibility.py")
+runner_verifier = runner.load(ROOT / "trace_only_verifier.py")
 
 
 class TestTraceOnlyVerifier(unittest.TestCase):
@@ -118,7 +119,7 @@ class TestTraceOnlyVerifier(unittest.TestCase):
         self.assertGreaterEqual(raw, 1)
 
     def test_campaign(self):
-        count, false_accepts, counts = runner.mutate_campaign(verifier)
+        count, false_accepts, counts = runner.mutate_campaign(runner_verifier)
         self.assertEqual(count, 250)
         self.assertEqual(false_accepts, 0)
         self.assertEqual(sum(counts.values()), 250)
