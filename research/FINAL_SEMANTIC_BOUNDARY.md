@@ -25,7 +25,7 @@ Validated for:
 - Requires-Python compatibility;
 - finite candidate domains with explicit completeness scope and attestation.
 
-Rich PEP 508 expressions are structurally representable through activation conditions, but exhaustive semantic preservation for every legal marker expression and every marker-variable interaction has not been established. The current packaging specification includes nested and/or markers and fields including python_version, python_full_version, sys_platform, platform_machine, implementation fields, extra, extras, and dependency_groups. citeturn936757search1
+Rich PEP 508 expressions are structurally representable through activation conditions, but exhaustive semantic preservation for every legal marker expression and every marker-variable interaction has not been established. The current packaging specification includes nested and/or markers and fields including python_version, python_full_version, sys_platform, platform_machine, implementation fields, extra, extras, and dependency_groups. 
 
 ### Environment semantics
 
@@ -96,7 +96,7 @@ Validated for:
 
 ### Dynamic metadata generation
 
-PEP 517 permits build backends to provide additional build requirements and metadata-generation hooks, executed in a build environment. citeturn639779search1turn936757search0
+PEP 517 permits build backends to provide additional build requirements and metadata-generation hooks, executed in a build environment. 
 
 Therefore:
 
@@ -106,13 +106,13 @@ is not equivalent to a static dependency edge unless the generated metadata itse
 
 ### Artifact and hash policy
 
-The current Python lock-file specification distinguishes package identity, archive identity, hashes, environment markers and dependency records. citeturn639779search0 pip hash-checking mode likewise makes allowed hashes part of installation admissibility. citeturn639779search2
+The current Python lock-file specification distinguishes package identity, archive identity, hashes, environment markers and dependency records.  pip hash-checking mode likewise makes allowed hashes part of installation admissibility. 
 
 The existing artifact + policy concepts can represent reduced cases, but complete hash-policy semantics have not been independently demonstrated.
 
 ### Lockfile semantics
 
-Lock files can constrain environments, extras, dependency groups, package markers, Requires-Python, dependency relations, archives, hashes and sources. citeturn639779search0 The current core can encode many of these as semantic constraints/policy inputs, but their complete interactions are not established.
+Lock files can constrain environments, extras, dependency groups, package markers, Requires-Python, dependency relations, archives, hashes and sources.  The current core can encode many of these as semantic constraints/policy inputs, but their complete interactions are not established.
 
 ### Virtual/provided packages
 
