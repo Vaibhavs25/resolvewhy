@@ -98,7 +98,9 @@ def mutation_campaign(v):
     require("proof-premise mutation family executed", "proof_premises" in {x[1] for x in results})
     families={x[1] for x in results}
     require("mutation taxonomy coverage", set(taxonomy).issubset(families))
-    return len(results), false_accepts
+    family_counts={fam:sum(x[1]==fam for x in results) for fam in taxonomy}
+    require("22 instances per primary family", all(n==22 for n in family_counts.values()))
+    return len(results), false_accepts, family_counts
 
 
 def run():
@@ -149,7 +151,7 @@ def run():
     for name, wanted in expected.items():
         require(f"mutation {name}", v["verify"](v["mutate"](base, name))[0] == wanted)
 
-    mutation_cases, mutation_false_accepts = mutation_campaign(v)
+    mutation_cases, mutation_false_accepts, mutation_family_counts = mutation_campaign(v)
 
     branch = copy.deepcopy(base)
     branch["trace_scope"] = "branch"
@@ -180,6 +182,7 @@ def run():
     print("SUBSET_MINIMAL_PROOFS = 1 executable fixture (historical full-corpus record: 2)")
     print(f"MUTATION_CASES = {mutation_cases}")
     print(f"MUTATION_FALSE_ACCEPTS = {mutation_false_accepts}")
+    print(f"MUTATION_FAMILY_COUNTS = {mutation_family_counts}")
     print(f"PROJECTION_WORLDS = {worlds}")
     print(f"POST_REPAIR_COLLISIONS = {repaired_collisions}")
     print(f"RAW_PRE_REPAIR_COLLISIONS = {raw_collisions}")
