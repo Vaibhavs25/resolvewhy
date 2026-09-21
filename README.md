@@ -22,9 +22,15 @@ The research separates:
 
 Within the tested finite semantic fragment, a serialized trace can act as a self-contained proof-supporting evidence artifact. The independent verifier can reconstruct the semantic problem, respect runtime context, finite evaluation domains, policy, activation conditions, candidate/artifact distinctions, coverage attestations, provenance, and explicit proof claims, then independently classify SAT/UNSAT and verify subset-minimality without consulting the original resolver or external state.
 
-The trace-only corpus replay produced **18/18 classification agreement**, **18/18 serialization round-trip agreement**, and **18/18 isolated replays**. Two nontrivial subset-minimal UNSAT proofs were independently rechecked. A 250-case serialization mutation campaign produced zero incorrectly accepted verified proofs, and a 256-world post-repair projection search produced zero semantic collisions in the tested fragment.
+The research record reports **18/18 trace-only classification agreement**, **18/18 serialization round-trip agreement**, **18/18 isolated replays**, **2** independently rechecked nontrivial subset-minimal UNSAT proofs, **250** serialization mutations with zero incorrectly accepted verified proofs, and an extended **256-world** post-repair projection search with zero semantic collisions.
 
-These numbers describe the tested experiments; they are not claims of universal correctness.
+The clean executable reproducibility runner currently regenerates the finite verifier fixture, its SAT/UNSAT and minimality checks, exactly 250 deterministic mutation cases, and the committed 64-world projection harness. The 18-case and 256-world results remain historical research-record evidence rather than fresh output of the clean runner.
+
+These results are bounded experimental evidence, not universal correctness claims.
+
+## Reproducibility
+
+Run `python research/run_reproducibility.py` for the clean, network-free research-harness checks. See `research/REPRODUCIBILITY_INDEX.md` for the exact executable versus historical evidence boundary.
 
 ## Proven semantic boundary
 
