@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json, copy, subprocess, sys, tempfile
+import json, copy, subprocess, sys, tempfile, argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -146,6 +146,22 @@ def run():
         td=Path(td); isolated=td/"verifier.py"; isolated.write_text(VERIFIER.read_text(encoding="utf-8"))
         p=subprocess.run([sys.executable,"-I",str(isolated)],cwd=td,capture_output=True,text=True)
         must("hermetic",p.returncode==0)
+    summary = {
+        "trace_only_corpus": {"value": "18/18", "status": "historical_serialized_replay"},
+        "serialization_roundtrip": {"executable": 1, "historical": 18},
+        "hermetic_replay": {"executable": 1, "historical": 18},
+        "subset_minimal_proofs": {"executable": 1, "historical": 2},
+        "mutation_cases": mutation_cases,
+        "mutation_false_accepts": false_accepts,
+        "mutation_verdict_counts": mutation_verdicts,
+        "projection_worlds": worlds,
+        "post_repair_collisions": repaired,
+        "raw_pre_repair_collisions": raw,
+        "self_tests": len(self_tests),
+    }
+    if getattr(run, "json_output", False):
+        print(json.dumps(summary, sort_keys=True))
+        return summary
     print("REPRODUCIBILITY SUITE")
     print("TRACE_ONLY_CORPUS = 18/18 (historical serialized corpus; not freshly re-executed)")
     print("SERIALIZATION_ROUNDTRIP = 1/1 executable fixture; historical 18/18")
@@ -157,6 +173,8 @@ def run():
     print(f"PROJECTION_WORLDS = {worlds}")
     print(f"POST_REPAIR_COLLISIONS = {repaired}")
     print(f"RAW_PRE_REPAIR_COLLISIONS = {raw}")
-    print(f"SELF_TESTS = {len(self_tests)}/{len(self_tests)}")
+    print(f"SELF_TESTS = {len(self_tests)}")
+    return summary
+
 if __name__=="__main__":
-    run()
+    cli()
