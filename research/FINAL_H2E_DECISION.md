@@ -264,3 +264,38 @@ The experiment also exposed one semantic proof-artifact requirement: multi-envir
 Accordingly, the trace-only stage is currently **B. TRACE-ONLY VERIFICATION REQUIRES ANOTHER SEMANTIC FIELD**, with the smallest repair being explicit proof-claim scope binding. After that repair, the hermetic verifier boundary is sufficient for the tested finite fragment, but full corpus-scale replay is not yet established by the committed harness.
 
 H2d therefore remains PARTIALLY SUPPORTED, not upgraded. H2e remains NOT TESTED with 0 substantive maintainer responses. Production architecture remains NOT APPROVED.
+
+## Final trace-only proof-artifact result — 2026-09-21
+
+The trace-only experiment was completed after the explicit proof-claim binding repair.
+
+### Result
+
+**A. TRACE-ONLY PROOF ARTIFACT VALIDATED — within the tested finite semantic fragment.**
+
+Full-corpus evidence:
+- 18/18 serialized corpus cases matched the intended trace-only classification.
+- 6 VERIFIED_UNSAT, 2 VERIFIED_SAT, 10 INSUFFICIENT_EVIDENCE, 0 INVALID_TRACE in the base corpus.
+- 18/18 serialization round-trips preserved semantic results.
+- 18/18 isolated replays completed without resolver/provider/index/network/external-state access.
+
+Proof-strength evidence:
+- RW-14: five-constraint transitive UNSAT core independently rechecked; every single core-element deletion produced SAT.
+- RW-09: universal Python-domain proof independently rechecked; Python 3.12 is SAT, Python 3.9 is UNSAT under Requires-Python >=3.10; every single core-element deletion produced SAT.
+- RW-02 remained a resolver-failure-but-SAT negative control; resolver failure labels were not trusted as mathematical proof.
+- RW-07 demonstrated that deleting an activation marker can create a false UNSAT, confirming that activation semantics remain proof-bearing.
+
+Falsification evidence:
+- 250 deterministic serialization mutations: 0 incorrectly accepted verified proofs.
+- 256-world post-repair projection search: 0 semantic collisions.
+- identical portable data plus different hidden native state: 0 differing proof results in the tested fragment.
+
+This completes the requested trace-only boundary test for the declared finite semantic fragment. It does not prove arbitrary resolver completeness, ecosystem-wide wire compatibility, maintainer acceptance, or production readiness.
+
+### H2 decomposition after this experiment
+
+- H2d remains **PARTIALLY SUPPORTED**: the semantic portability boundary is demonstrated only for the tested fragment and resolver-shaped evidence families.
+- H2e remains **NOT TESTED**: there are still 0 substantive maintainer responses.
+- Production architecture remains **NOT APPROVED**.
+
+No new schema field was required after proof-claim binding was repaired.
