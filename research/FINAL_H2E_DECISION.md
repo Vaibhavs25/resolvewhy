@@ -6,7 +6,7 @@
 
 No substantive maintainer feedback has been received.
 
-The public-architecture audit performed on 2026-09-21 is independent source/experiment evidence and does not count as maintainer validation.
+The public architecture experiments performed on 2026-09-21 are independent technical evidence and do not count as maintainer validation.
 
 ## Public artifact
 
@@ -16,134 +16,134 @@ https://github.com/Vaibhavs25/resolvewhy
 RFC:
 https://github.com/Vaibhavs25/resolvewhy/issues/2
 
-## Architecture audit result
+## Previous H2e state
 
-Current upstream source/documentation was examined for:
+Four individualized messages were successfully sent through Outlook to:
 
-- resolvelib
-- pip
-- Poetry
-- pipgrip
-- uv
+1. Damian Shaw — resolvelib / pip
+2. Pradyun Gedam — pip / PyPA
+3. Randy Döring — Poetry
+4. ddelange — pipgrip
 
-The audit found strong recurring semantic concepts:
+Charlie Marsh — uv / Astral — was not contacted because the connected Outlook account returned HTTP 403 due to account suspension.
 
-- requirements
-- candidate identity
-- dependency edges
-- environment/policy
-- candidate availability
-- conflict/incompatibility
-- provenance
-- source/index information
+The last mailbox check found **0 substantive responses**.
 
-It also found significant differences in ownership and semantics across resolver/provider/source layers.
+That status remains unchanged.
 
-### Major falsification finding 1: candidate completeness
+## Public-architecture audit
 
-A global candidate_inventory_complete boolean is insufficient.
+The audit examined current upstream source/documentation for:
 
-Candidate discovery and filtering may involve:
+- resolvelib 1.2.2.dev0 — commit a0cb7c50b78028f840b238d8e1c391e0546f2325
+- pip 26.3.dev0 source tree — commit 892d13b34a20b3244a05d90622bbb5bf8e7ccf46
+- Poetry 2.5.1 — commit 94b6e35b9091991887aa54feeb3771a86d3bd692
+- pipgrip current repository HEAD — commit 195dfe41f9efa7abe161d6d69368e35939867b33
+- uv 0.10.0 source tree — commit a1b84bcbda122236faae8fa5fdcbe16cfb76cde2
 
-- provider/source queries
-- index scope
-- environment filters
-- artifact compatibility
-- prerelease and other policy decisions
-- bounded discovery
-- incomplete metadata
+Executable local environment:
 
-A correct proof boundary therefore needs coverage metadata attached to candidate domains/queries.
+- Python 3.13.5
+- pip 25.1.1
+- uv 0.10.0
 
-### Major falsification finding 2: incompatibility/rejection semantics
+Poetry and pipgrip were source-validated because their executables were not installed.
 
-“Rejected candidate” and “incompatibility” are not universal primitives.
+## Revised-contract experiment
 
-- resolvelib exposes provider/reporter causes and criteria
-- Poetry and pipgrip use Mixology-style incompatibilities
-- uv uses PubGrub derivation structures
+The revised contract was tested against local real resolver behavior covering:
 
-These can be normalized semantically, but their native meanings should remain explicitly namespaced.
+- multiple index/source scopes
+- platform-only artifacts
+- Requires-Python
+- prerelease policy
+- direct URLs
+- local VCS identity
+- invalid/incomplete package metadata
+- subset/bounded discovery
+- artifact-level rejection
+- same name/version from different sources
 
-### Major falsification finding 3: candidate identity
+A tiny adversarial proof gate passed **8/8** contract checks.
 
-package + version is not universally enough.
+No tested case produced a false proof after applying the revised semantics.
 
-URL, VCS, local path, source/index, or artifact identity can affect satisfiability.
+## Important result
 
-The adapter must therefore preserve opaque candidate identity.
+The original revision was tightened once more during adversarial review:
 
-### Major falsification finding 4: environment vs policy
+> Resolver exhaustion alone is not sufficient to prove that the external candidate universe is exhaustive.
 
-A machine-environment snapshot alone does not capture all resolver semantics.
+A resolver can exhaust a candidate set returned by a provider while the provider has only observed a subset of a larger source universe.
 
-The trace should separate runtime context from resolution policy.
+Therefore candidate completeness must be:
 
-## Decision on resolvewhy-trace/v0
+- scoped to an explicit candidate domain;
+- tied to source/index/query scope;
+- supported by an explicit exhaustion/authority attestation;
+- connected to evidence references;
+- interpreted only within that declared domain.
+
+## Architecture decision
 
 ### KEEP unchanged
 
 Rejected.
 
-The audit found concrete semantic ambiguity that could allow an external consumer to overclaim completeness or flatten resolver-specific causes.
+The original v0 semantics were too coarse at candidate completeness, identity, rejection, and conflict boundaries.
 
 ### ABANDON
 
 Rejected.
 
-The same semantic structure recurs across all four architecture families, and the tested resolvelib evidence path plus structured uv/Poetry/pipgrip internals show that the underlying abstraction has technical substance.
+The audited resolver families contain recurring semantic concepts sufficient to make a resolver-neutral layer technically plausible.
 
 ### NARROW only
 
-Insufficient by itself.
+Insufficient.
 
-The semantic core should be narrower, but explicit coverage and namespacing are also required.
+The proof core should be small, but it also needs explicit coverage and provenance semantics.
 
 ### REVISE
 
 **Selected.**
 
-The revised architecture is:
+The revised contract is defined in:
 
-resolver/provider-specific evidence
--> typed + namespaced observations
--> explicit per-domain coverage
--> small resolver-neutral semantic core
--> independent consistency/MUS verification
+research/REVISED_TRACE_SCHEMA.md
 
-The proposed revised resolver-neutral core is:
+The adversarial experiment is recorded in:
 
-- requirement
-- opaque candidate identity
-- dependency edge
-- runtime context
-- resolution policy
-- candidate-domain coverage
-- semantic constraint/literal
-- provenance
-- explicit evidence state
+research/REVISED_TRACE_ADVERSARIAL_AUDIT.md
 
-Everything else may remain optional resolver-specific evidence.
+The field-level audit is in:
+
+research/TRACE_FIELD_AUDIT.md
 
 ## H2 decomposition
 
-| Hypothesis | Current state | Reason |
+| Hypothesis | Current state | Evidence |
 |---|---|---|
-| H2a | SUPPORTED narrowly | resolvelib exposes provider/reporter contracts that can carry structured evidence |
-| H2b | PARTIALLY SUPPORTED | controlled normalization works, but portability requires revised coverage/identity/policy semantics |
-| H2c | SUPPORTED in controlled traces | 6/6 UNSAT traces already passed independent minimality verification |
-| H2d | UNPROVEN | a common semantic layer is plausible; a stable portable external trace interface is not established |
+| H2a | SUPPORTED narrowly | Real structured instrumentation exists through resolvelib; other systems expose rich structured internals |
+| H2b | PARTIALLY SUPPORTED | Normalization survives the tested cases after explicit coverage/identity/policy revisions |
+| H2c | SUPPORTED in controlled traces | Prior 6/6 real UNSAT trace verification and independent core validation |
+| H2d | UNPROVEN | Semantic concepts recur, but a stable portable external trace interface has not been established |
 | H2e | NOT TESTED | 0 substantive maintainer responses |
 
-## Maintainer validation
+## What the experiment supports
 
-Current substantive response count:
+The strongest defensible technical statement is:
 
-**0**
+> A resolver-neutral semantic evidence layer is technically plausible for the tested dependency-resolution evidence classes, provided that candidate-domain coverage, candidate identity, provenance, runtime context, resolution policy, and resolver-specific conflict semantics are represented explicitly.
 
-No A-D classification exists.
+## What remains unproven
 
-Silence, delivery status, and blocked communication attempts are not treated as technical evidence.
+- whether maintainers consider the abstraction useful
+- whether maintainers would expose the required evidence
+- whether a stable public trace API is acceptable
+- whether the revised semantics remain practical across more ecosystems
+- whether difficult real-world build/artifact cases can be represented without excessive adapter complexity
+- whether downstream tooling would adopt the model
 
 ## Final research decision
 
@@ -151,34 +151,8 @@ Silence, delivery status, and blocked communication attempts are not treated as 
 
 More specifically:
 
-> REVISE resolvewhy-trace/v0, then test the revised coverage/provenance contract against adversarial real-world traces. Do not build production infrastructure yet.
+**The revised contract survives the current adversarial experiment, but production infrastructure remains unjustified.**
 
-## What is now defensible to claim
+The next high-value work is to expand adversarial real-world coverage or obtain substantive maintainer feedback. H2e remains a separate empirical gate.
 
-> Public architecture evidence across resolvelib/pip, Poetry, pipgrip and uv supports the plausibility of a resolver-neutral semantic evidence layer, provided that candidate completeness, provenance, identity, policy and resolver-specific conflict semantics are represented explicitly.
-
-## What remains unproven
-
-- whether maintainers consider the interface useful
-- whether maintainers would expose the required evidence
-- whether a stable public trace API is acceptable
-- whether downstream tooling would adopt the model
-- whether the revised schema is portable without excessive adapter-specific complexity
-- whether difficult real-world source/artifact cases can be handled without misleading proofs
-
-## Next technical gate
-
-Test the revised candidate coverage model with adversarial cases involving:
-
-- multiple indexes
-- source-specific candidates
-- platform/wheel filtering
-- requires-Python filtering
-- prerelease policy
-- VCS/direct URL identity
-- incomplete metadata
-- bounded candidate discovery
-
-The output of that experiment should be used to decide whether the semantic contract is sufficiently trustworthy to justify production architecture.
-
-No maintainer support is claimed.
+No maintainer support, ecosystem adoption, standardization, or production readiness is claimed.
