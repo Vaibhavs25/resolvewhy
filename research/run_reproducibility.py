@@ -30,8 +30,10 @@ def mutate_campaign(v):
         variant=i // len(families)
         if fam=="ids":
             t["candidates"][variant % len(t["candidates"])]["id"]=None
-        elif fam in {"references","dependency_references"}:
-            t["dependencies"][0]["parent_candidate"]=f"missing-{variant}"
+        elif fam=="references":
+            t["semantic_constraints"][0]["source_ref"]=f"missing-root-{variant}"
+        elif fam=="dependency_references":
+            t["dependencies"][0]["parent_candidate"]=f"missing-parent-{variant}"
         elif fam=="arrays":
             t["candidate_domains"][0]["candidate_ids"]=[f"ghost-{variant}"]
         elif fam=="evaluation_domain":
