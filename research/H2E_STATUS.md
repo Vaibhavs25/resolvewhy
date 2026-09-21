@@ -1,42 +1,80 @@
 # H2e status
 
-**Status: NOT TESTED**
+Maintainer-validation status: **NOT TESTED**
 
-The public research artifact is available at:
-https://github.com/Vaibhavs25/resolvewhy
-https://github.com/Vaibhavs25/resolvewhy/issues/2
+## Public-architecture validation — 2026-09-21
 
-## Current claims
+An independent adversarial architecture audit was completed against current upstream source/documentation for:
 
-- Problem exists: supported by prior technical research.
-- Semantic abstraction is technically meaningful: supported in controlled resolvelib traces.
-- Realistic exposure: supported narrowly by controlled resolvelib instrumentation.
-- Downstream consumption by maintainers: **NOT TESTED**.
-- Cross-ecosystem portability: **UNPROVEN**.
+- resolvelib / pip
+- Poetry / Mixology
+- pipgrip / PubGrub
+- uv / PubGrub
 
-## Outreach
+This audit is technical architecture evidence only. It does not constitute maintainer validation.
 
-Four of five fixed first-wave targets received individualized email through the connected Outlook account:
+### Architecture result
 
-- Damian Shaw
-- Pradyun Gedam
-- Randy Döring
-- ddelange
+The semantic evidence abstraction remains technically plausible, but the current resolvewhy-trace/v0 wire semantics are too coarse in several places.
 
-Charlie Marsh has not received the message. The publicly documented address was verified, but Outlook returned HTTP 403 because the connected account is suspended. No retry was made.
+**Architecture decision: REVISE resolvewhy-trace/v0.**
 
-There are currently **0 substantive maintainer responses as of 2026-09-20**.
+Required revisions:
 
-Therefore H2e remains **NOT TESTED**.
+1. Replace trace-wide candidate_inventory_complete with per-candidate-query/domain coverage metadata.
+2. Preserve opaque adapter-defined candidate identity.
+3. Type rejection evidence by reason kind and source layer.
+4. Namespace resolver-specific incompatibility/derivation semantics.
+5. Separate runtime context from resolution policy.
+6. Require explicit provenance for derived claims.
+7. Keep resolver state, source/index details and artifact selection optional and provider/resolver-specific.
 
-No silence, delivery event, or failed send is treated as technical validation.
+These changes narrow the resolver-neutral proof core while preserving the central semantic model.
 
-## Mailbox check — 2026-09-20
+## H2 decomposition
 
-The connected Outlook mailbox was searched using the four verified recipient identities, the exact outreach subject, and the requested technical keywords. No incoming response was found from Damian Shaw, Pradyun Gedam, Randy Döring, or ddelange. Search hits for the subject and keywords corresponded to the original sent outreach messages, not replies.
+- **H2a:** SUPPORTED, narrowly through resolvelib structured provider/reporter instrumentation. Other resolver families also contain rich structured evidence internally, but this does not establish one stable public API.
+- **H2b:** PARTIALLY SUPPORTED. Controlled traces normalize successfully, but the audit found semantic differences requiring the v0 revisions above.
+- **H2c:** SUPPORTED in the controlled traces already benchmarked.
+- **H2d:** **UNPROVEN.** The audited architectures share semantic concepts, but a stable portable cross-resolver failure-trace interface was not established.
+- **H2e:** **NOT TESTED.** There are still 0 substantive maintainer responses.
 
-**Result: 0 substantive responses as of 2026-09-20. H2e remains NOT TESTED.**
+## Reproducible sanity checks
 
-No follow-up was sent. Earliest reasonable follow-up date is 2026-09-27, with one concise follow-up limited to recipients who remain non-responsive.
+The local sandbox currently contains Python 3.13.5, pip 25.1.1 and uv 0.10.0.
 
-No maintainer technical feedback has been obtained, so no trace fields, boundaries, or architecture are changed on the basis of this mailbox check.
+A local pip experiment using two minimal wheels showed:
+
+- satisfiable dry-run + --report produced the stable version-1 installation report
+- an intentionally contradictory local resolution failed with exit code 1 and produced no report file
+- failure output remained human-readable ResolutionImpossible
+
+A local uv experiment using two minimal local wheels and conflicting root requirements showed:
+
+- exit code 1
+- human-readable “No solution found” output
+- no machine-readable failure-trace file emitted by the tested CLI invocation
+
+Poetry and pipgrip were not installed in the sandbox, so their validation was source-based rather than executable.
+
+## Scientific interpretation
+
+The strongest defensible technical statement is:
+
+> Real resolver architectures contain sufficiently rich structured concepts for a resolver-neutral semantic evidence layer to be plausible, but trustworthy downstream proofs require explicit candidate-domain coverage and preservation of resolver/provider-specific provenance and conflict semantics.
+
+This does not establish:
+
+- maintainer support
+- ecosystem adoption
+- standardization
+- production readiness
+- stable cross-ecosystem API portability
+
+No maintainer response has been invented or inferred.
+
+## Current gate
+
+**CONTINUE RESEARCH**
+
+The next technical target is to test the revised candidate-coverage/provenance contract against adversarial real-world cases before building production infrastructure.
