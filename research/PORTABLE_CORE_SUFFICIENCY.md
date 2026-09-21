@@ -242,3 +242,9 @@ The prior genuine projection collision was repaired by explicit evaluation_domai
 **BOUNDARY SURVIVES — NO NEW SEMANTIC DEFECT.**
 
 H2d remains PARTIALLY SUPPORTED and bounded to the tested semantic portability fragment.
+
+
+## Stable references
+
+- https://github.com/sarugaku/resolvelib/blob/main/src/resolvelib/providers.py
+- https://docs.astral.sh/uv/reference/internals/resolver/
