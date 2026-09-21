@@ -243,9 +243,9 @@ It directly evaluates only:
 - the recorded `Requires-Python >=3.10` compatibility rule;
 - finite evaluation-domain quantification for existential/universal claims;
 - explicit branch selection through `proof_claim.branch_ref`;
-- complete candidate-domain coverage with attestation;
+- complete candidate-domain coverage with attestation and its in-scope evidence references;
 - proof-premise selection from declared semantic constraints;
-- provenance reachability from proof premises to in-scope requirement/dependency/evidence references;
+- provenance reachability from proof premises to in-scope requirement/dependency/evidence references, including dangling/cycle/unrelated-evidence failures;
 - artifact-reference integrity and the tested artifact `compatible` flag;
 - the fixed executable policy contract used by the fixture.
 
