@@ -94,11 +94,12 @@ The clean runner verifies the following executable cases in the committed finite
 1. SAT and UNSAT reconstruction over normalized version constraints.
 2. Dependency-edge activation via the explicit boolean `active` flag.
 3. The recorded `Requires-Python >=3.10` compatibility case.
-4. Complete finite candidate-domain coverage with attestation.
+4. Complete finite candidate-domain coverage with attestation and in-scope coverage evidence.
 5. Explicit proof quantifier/domain binding.
 6. Proof premises selecting the semantic constraints actually reconstructed.
-7. Provenance reachability from proof premises to in-scope evidence.
-8. Candidate/artifact reference integrity; artifact feasibility itself is not evaluated.
+7. Provenance reachability from proof premises to in-scope evidence, including corrupted/cyclic/unrelated cases.
+8. Candidate/artifact reference integrity and the tested artifact `compatible` feasibility flag.
 9. Fixed executable policy values; general prerelease/source-policy semantics are not evaluated.
 10. Explicit branch selection through `proof_claim.branch_ref` within the fixture domain.
 11. Resolver-label disagreement: the declared SAT/UNSAT label is ignored in favor of recomputation.
+12. Uninterpretable finite semantic data is rejected as `INVALID_TRACE`.
