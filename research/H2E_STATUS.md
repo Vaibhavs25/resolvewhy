@@ -168,3 +168,28 @@ This is a genuine semantic requirement for a self-contained proof artifact, so t
 The trace-only harness demonstrates hermetic reconstruction of a serialized contradiction without consulting native resolver state. Full corpus-scale trace-only replay remains bounded by the finite verifier fragment currently implemented in the research harness.
 
 H2d remains PARTIALLY SUPPORTED. H2e remains NOT TESTED with 0 substantive maintainer responses.
+
+## Final trace-only verification — 2026-09-21
+
+The repaired proof-claim semantics were exercised in a full 18-case serialized replay. Each case was verified after native-state detachment using only the serialized trace and the research verifier.
+
+Results:
+- 18/18 traces matched the intended trace-only classification.
+- VERIFIED_UNSAT: RW-01, RW-09, RW-14, RW-15, RW-16, RW-17.
+- VERIFIED_SAT: RW-02, RW-18.
+- INSUFFICIENT_EVIDENCE: RW-03, RW-04, RW-05, RW-06, RW-07, RW-08, RW-10, RW-11, RW-12, RW-13.
+- INVALID_TRACE: 0 base corpus traces.
+- 18/18 serialization round-trips preserved the result.
+- 18/18 isolated replays completed without resolver, provider, index, network, or undeclared filesystem access.
+
+Two nontrivial subset-minimal UNSAT proofs were independently rechecked from serialized traces: RW-14 (five-element transitive core) and RW-09 (three-element universal Python-domain core).
+
+A deterministic 250-case structural mutation campaign accepted 0 malformed/corrupted artifacts as verified proofs. An extended 256-world projection search produced 0 post-repair semantic collisions and 0 cases where identical portable data plus different hidden native state changed the correct proof result in the tested fragment.
+
+The proof-claim repair therefore resolves the previously observed quantifier/domain binding gap. No additional schema field was required.
+
+**Trace-only result: A. TRACE-ONLY PROOF ARTIFACT VALIDATED — within the tested finite semantic fragment.**
+
+**H2e remains NOT TESTED.** The corpus and verifier experiments contain no maintainer feedback and do not count as maintainer validation.
+
+Production architecture remains NOT APPROVED.
