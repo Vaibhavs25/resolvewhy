@@ -74,6 +74,7 @@ def mutation_campaign(v):
     require("250 distinct mutation instances", len({x[2] for x in results}) == 250)
     false_accepts = sum(r[3] in {"VERIFIED_SAT", "VERIFIED_UNSAT"} for r in results)
     require("zero mutation false accepts", false_accepts == 0)
+    assert "proof_premises" in {x[1] for x in results}
     return len(results), false_accepts
 
 
