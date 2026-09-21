@@ -102,7 +102,7 @@ The historical full-corpus experiment recorded:
 - 250 deterministic serialization mutations produced 0 incorrectly accepted verified proofs;
 - an extended 256-world post-repair projection search produced 0 semantic collisions in the committed harness.
 
-The current clean executable runner regenerates the finite committed verifier checks, one executable subset-minimal proof fixture, exactly 250 deterministic mutation cases, and the **extended 256-world projection harness**. It does not freshly re-execute the historical 18-case resolver corpus; that corpus remains a serialized research record. In the current execution environment, GitHub was reachable only through the repository connector; an independent local `git clone` attempt was blocked by the environment's external DNS/network restriction, so this pass records code-level alignment rather than claiming a local end-to-end clone run.
+The current clean executable runner regenerates the finite committed verifier checks, **two executable subset-minimal proof fixtures (RW-09 and RW-14)**, exactly 250 deterministic mutation cases, and the **extended 256-world projection harness**. It does not freshly re-execute the historical 18-case resolver corpus; that corpus remains a serialized research record. In the current execution environment, GitHub was reachable only through the repository connector; an independent local `git clone` attempt was blocked by the environment's external DNS/network restriction, so this pass records code-level alignment rather than claiming a local end-to-end clone run.
 
 These are research-boundary counts, not universal or exhaustive guarantees. See `research/REPRODUCIBILITY_INDEX.md`.
 
@@ -193,9 +193,9 @@ Maintainer feedback would add information that technical experiments cannot prov
 
 H2e is separate from the mathematical foundation: the absence of feedback does not weaken the verified proof results; it leaves the practical interface/adoption question unresolved.
 
-The final clean repository now separates executable and historical evidence. The committed runner `research/run_reproducibility.py` regenerates a finite SAT/UNSAT proof fixture, a SAT negative control, serialization and hermetic replay checks, declared-core deletion checks, exactly 250 distinct deterministic mutation instances, and the 256-world projection harness.
+The final clean repository now separates executable and historical evidence. The committed runner `research/run_reproducibility.py` replays all 18 committed serialized fixtures, regenerates their serialization and hermetic checks, independently checks the two executable subset-minimality fixtures (RW-09 and RW-14), generates exactly 250 distinct deterministic mutation instances, and runs the 256-world projection harness.
 
-The 18/18 serialized corpus result remains a historical fixture/replay record rather than a fresh live re-execution of every historical resolver incident. The current runner reports that distinction explicitly.
+The 18/18 result is a replay of the committed serialized semantic fixtures; it remains a historical record rather than a fresh live re-execution of every historical resolver incident. The current runner reports that distinction explicitly.
 
 The committed verifier is intentionally narrower than the semantic specification. Its executable fragment directly evaluates normalized version constraints, explicit dependency activation, the tested `Requires-Python >=3.10` rule, finite proof quantification, candidate coverage, proof-premise selection, provenance reachability, and minimality. It also checks artifact-reference integrity and a fixed policy contract, but it does not implement a general wheel-selection/build engine, general PEP 508 evaluator, complete lockfile semantics, or generic resolver policy semantics.
 
