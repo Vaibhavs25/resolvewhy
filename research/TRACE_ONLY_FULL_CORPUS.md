@@ -1,3 +1,7 @@
+## Reproducibility note
+
+This document is a historical record of the completed 18-case serialized replay. The current clean runner does not materialize those 18 fixtures, so it does not claim to regenerate this table. For executable clone-and-run checks, use `research/run_reproducibility.py`.
+
 # Trace-Only Full Corpus
 
 **Date:** 2026-09-21  
