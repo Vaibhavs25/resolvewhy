@@ -29,7 +29,7 @@ def mutate_campaign(v):
         fam=families[i % len(families)]
         variant=i // len(families)
         if fam=="ids":
-            t["candidates"][variant % len(t["candidates"])]["id"]=None
+            t["candidates"][variant % len(t["candidates"])]["id"]=f"mutated-candidate-{variant}"
         elif fam=="references":
             t["semantic_constraints"][0]["source_ref"]=f"missing-root-{variant}"
         elif fam=="dependency_references":
@@ -44,12 +44,12 @@ def mutate_campaign(v):
             t["proof_claim"]["evaluation_domain_ref"]=f"missing-{variant}"
         elif fam=="coverage_attestation":
             if variant % 2 == 0:
-                t["candidate_domains"][0]["coverage"].pop("attestation",None)
+                t["candidate_domains"][0]["coverage"].pop("attestation",None)\n                t["candidate_domains"][0]["coverage"]["mutation_tag"]=f"missing-attestation-{variant}"
             else:
                 t["candidate_domains"][0]["coverage"]["attestation"]["evidence_refs"]=[f"missing-{variant}"]
         elif fam=="provenance":
             if variant % 2 == 0:
-                t["provenance"]=[]
+                t["provenance"]=[]\n                t["evidence_state"]["mutation_tag"]=f"missing-provenance-{variant}"
             else:
                 t["provenance"][0]["premise_refs"]=[f"missing-{variant}"]
         elif fam=="candidate_artifact_links":
@@ -57,15 +57,15 @@ def mutate_campaign(v):
         elif fam=="proof_premises":
             t["proof_claim"]["premise_refs"]=[f"missing-{variant}"]
         elif fam=="evidence_states":
-            t["evidence_state"]["overall"]=["unknown","incomplete","missing"][variant % 3]
+            t["evidence_state"]["overall"]=["unknown","incomplete","missing"][variant % 3]\n            t["evidence_state"]["mutation_tag"]=f"state-{variant}"
         results.append((i,fam,json.dumps(t,sort_keys=True,separators=(",",":")),v["verify"](t)[0]))
     for j in range(8):
         t=copy.deepcopy(base)
         mode=j%4
-        if mode==0: t["proof_claim"]["premise_refs"]=["c:missing"]
+        if mode==0: t["proof_claim"]["premise_refs"]=[f"c:missing-{j}"]
         elif mode==1: t["proof_claim"]["evaluation_domain_ref"]=f"missing-{j}"
         elif mode==2:
-            t["trace_scope"]="universal"; t["proof_claim"]["quantifier"]="existential"
+            t["trace_scope"]="universal"; t["proof_claim"]["quantifier"]="existential"; t["proof_claim"]["status_claim"]=f"invalid-status-{j}"
         else: t["candidate_domains"][0]["coverage"]["attestation"]["evidence_refs"]=[f"missing-extra-{j}"]
         results.append((242+j,"targeted",json.dumps(t,sort_keys=True,separators=(",",":")),v["verify"](t)[0]))
     must("250 distinct mutations",len({r[2] for r in results})==250)
