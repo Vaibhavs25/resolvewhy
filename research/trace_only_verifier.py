@@ -46,11 +46,13 @@ def structural(t):
         if cov.get('status')=='complete' and not isinstance(cov.get('attestation'),dict): return False,'complete coverage lacks attestation'
         if any(x not in ids for x in q.get('candidate_ids',[])): return False,'dangling coverage candidate'
     if not t['provenance']: return False,'missing provenance'
+    if any(p.get('id') is None for p in t['provenance'] if isinstance(p,dict)): return False,'invalid provenance IDs'
     evidence_refs=set()
     for q in t['candidate_domains']:
         a=q.get('coverage',{}).get('attestation',{})
         if isinstance(a,dict): evidence_refs.update(a.get('evidence_refs',[]))
     claimed=list(claim.get('premise_refs',[]))
+    if not claimed.issubset(sem_by_id): return False,'proof premise is not a declared semantic constraint'
     for sid in claimed:
         if sid not in sem_by_id: return False,'proof premise is not a declared semantic constraint'
         matches=[p for p in t['provenance'] if isinstance(p,dict) and sid in p.get('premise_refs',[])]
