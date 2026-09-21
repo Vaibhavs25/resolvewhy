@@ -209,6 +209,16 @@ The current README has been aligned to the final high-level status, including th
 
 The public RFC remains an **experimental research artifact**. It should be understood as a research question and semantic proposal, not as an endorsed ecosystem specification. It still contains the original illustrative v0 concepts; the research records elsewhere in the repository contain the later semantic repairs. This is a documentation-versioning issue, not evidence of technical invalidity.
 
+
+### Executable claim boundary
+
+The committed executable verifier is intentionally narrower than the whole semantic schema. It implements a finite version/constraint fragment, the tested activation-marker forms, explicit finite evaluation-domain quantification, the tested prerelease policy modes, source filtering, the reduced artifact-compatibility semantics, candidate-domain completeness checks, proof-premise participation, provenance reachability, and subset-minimality by deletion.
+
+It does not implement full PEP 508 semantics, full build-system behavior, complete wheel/sdist selection, complete hash policy, complete lockfile semantics, symbolic/infinite domains, or arbitrary resolver-native semantics. Those remain research/schema boundary statements rather than executable guarantees.
+
+### Reproducibility entry points
+
+Use `python research/run_reproducibility.py` for the aggregate finite-suite run and `python -m unittest research.test_reproducibility` for the explicit test suite. The machine-readable result is available with `--json` and optional `--write-results`.
 ## 16. Reproducibility map
 
 | Claim | Primary evidence | Code/harness | Result artifact |
