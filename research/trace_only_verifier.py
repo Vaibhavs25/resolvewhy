@@ -88,8 +88,9 @@ def candidate_usable(c,t,env):
     if rp is not None and rp != '>=3.10':
         return False
     for a in t.get('artifacts', []):
-        if a.get('candidate_ref') == c.get('id') and a.get('compatible') is False:
-            return False
+        if a.get('candidate_ref') == c.get('id'):
+            if a.get('compatible') is False:
+                return False
     return True
 
 def branch_sat(t,env):
