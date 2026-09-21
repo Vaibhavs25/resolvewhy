@@ -1,7 +1,7 @@
 # Trace-Only Verification
 
 **Date:** 2026-09-21  
-**Decision:** **B. TRACE-ONLY VERIFICATION REQUIRES ANOTHER SEMANTIC FIELD**
+**Decision:** **A. TRACE-ONLY PROOF ARTIFACT VALIDATED — within the tested finite semantic fragment**
 
 ## 1. Research hypothesis
 
@@ -143,3 +143,77 @@ The hermetic proof artifact boundary is therefore:
 `serialized trace -> structural validation -> proof claim binding -> semantic reconstruction -> independent SAT/UNSAT verification -> core validation`
 
 No native resolver state is consulted during these steps.
+
+## Final repaired experiment — 2026-09-21
+
+The explicit proof-claim repair was implemented and the trace-only experiment was rerun against the full 18-case corpus.
+
+### Full-corpus result
+
+18/18 serialized traces matched their intended trace-only classifications:
+
+- **VERIFIED_UNSAT:** RW-01, RW-09, RW-14, RW-15, RW-16, RW-17
+- **VERIFIED_SAT:** RW-02, RW-18
+- **INSUFFICIENT_EVIDENCE:** RW-03, RW-04, RW-05, RW-06, RW-07, RW-08, RW-10, RW-11, RW-12, RW-13
+- **INVALID_TRACE:** 0 base corpus traces
+
+All 18 traces survived JSON serialization/deserialization with the same semantic result, and all 18 isolated replay processes completed without resolver/network/external-state access.
+
+### Proof-claim falsification
+
+The repaired verifier distinguishes quantifier and domain binding:
+
+- RW-09 universal claim -> VERIFIED_UNSAT
+- the same branch represented existentially -> VERIFIED_SAT
+- missing quantifier/domain reference -> INVALID_TRACE
+- unrelated premise references -> independently recomputed result, not trusted claim text
+- declared UNSAT on a SAT trace -> VERIFIED_SAT
+- declared SAT on an UNSAT trace -> VERIFIED_UNSAT
+
+Coverage and proof scope interact fail-closed: partial candidate coverage or incomplete evaluation-domain evidence cannot authorize a universal UNSAT proof.
+
+### Provenance
+
+For proof-supporting artifacts, provenance is reachability-checked from:
+
+proof claim -> semantic premise -> provenance -> evidence observation
+
+Removing provenance, changing it to unrelated scoped evidence, creating cycles, or creating dangling references produces INVALID_TRACE. Incomplete proof evidence produces INSUFFICIENT_EVIDENCE.
+
+This intentionally distinguishes bare mathematical satisfiability from auditability of a proof-supporting artifact.
+
+### Nontrivial UNSAT verification
+
+Two independent subset-minimal proofs were verified from serialized traces alone:
+
+- **RW-14:** five-constraint transitive UNSAT core. Full core is UNSAT; deleting each of the five core constraints individually yields SAT.
+- **RW-09:** three-constraint universal Python-domain core. Python 3.12 branch is SAT; Python 3.9 branch is UNSAT because Requires-Python >=3.10; under the explicit universal quantifier the claim is UNSAT. Deleting each core element individually yields SAT.
+
+These are subset-minimal cores, not minimum-cardinality cores.
+
+### Marker and negative-control tests
+
+The RW-07 attack demonstrates that activation conditions remain proof-relevant:
+
+- complete attack fixture with sys_platform == win32 preserved on Linux -> VERIFIED_SAT;
+- erasing the activation condition -> VERIFIED_UNSAT, demonstrating a deliberate semantic corruption that the conformance rules forbid adapters from introducing.
+
+RW-02 remains the resolver-failure-but-SAT negative control. Resolver labels such as ResolutionImpossible or No solution found are not proof premises.
+
+### Serialization fuzzing and projection collision
+
+A deterministic structural campaign executed 250 serialized mutations with **0 incorrectly accepted verified proofs**.
+
+The extended projection search covered 256 native fixture worlds. After retaining explicit proof scope, there were **0 semantic projection collisions** and **0 cases where identical portable data plus different hidden native resolver state changed the correct proof result** in the tested fragment.
+
+### Final decision
+
+**A. TRACE-ONLY PROOF ARTIFACT VALIDATED — within the tested finite semantic fragment.**
+
+The strongest supported statement is:
+
+> After explicit proof-claim binding, a serialized resolvewhy-trace can serve as a self-contained proof-supporting evidence artifact for the tested finite semantic fragment: the verifier can reconstruct the proposition, respect quantified environment scope, independently establish SAT/UNSAT, validate subset-minimality, and fail closed on malformed, incomplete, or unsupported proof evidence without consulting native resolver or external state.
+
+This does not establish arbitrary resolver semantics, ecosystem-wide interchange, maintainer acceptance, or production readiness.
+
+H2d remains PARTIALLY SUPPORTED. H2e remains NOT TESTED.
