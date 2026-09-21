@@ -168,6 +168,7 @@ def run():
     print(f"MUTATION_FALSE_ACCEPTS = {mutation_false_accepts}")
     print(f"PROJECTION_WORLDS = {worlds}")
     print(f"POST_REPAIR_COLLISIONS = {repaired_collisions}")
+    print(f"RAW_PRE_REPAIR_COLLISIONS = {raw_collisions}")
 
 
 if __name__ == "__main__":
