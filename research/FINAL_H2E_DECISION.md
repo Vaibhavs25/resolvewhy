@@ -156,3 +156,48 @@ More specifically:
 The next high-value work is to expand adversarial real-world coverage or obtain substantive maintainer feedback. H2e remains a separate empirical gate.
 
 No maintainer support, ecosystem adoption, standardization, or production readiness is claimed.
+
+
+## Real-world validation update — 2026-09-21
+
+The latest falsification experiment expanded the evidence base from controlled traces to a corpus of 18 substantially more realistic dependency-resolution cases drawn from public pip, uv, and Poetry issue reports, together with executable pip 25.1.1 and uv 0.10.0 reductions.
+
+### Technical result
+
+**A. REAL-WORLD VALIDATION PASSES**
+
+The revised contract survived the corpus without a new semantic defect requiring schema revision.
+
+The strongest evidence is not the number of passing cases but the boundary behavior:
+- a nontrivial transitive conflict yielded an independently verified subset-minimal UNSAT core;
+- source-local emptiness and authentication failures did not authorize global no-candidate proofs;
+- marker activation, artifact identity, prerelease policy, Requires-Python, source identity, yanking, and universal-resolution splits remained semantically distinguishable;
+- a real resolver-failure-but-satisfiable pattern was retained as a negative control;
+- an unsafe adapter normalization was explicitly demonstrated and rejected: flattening an inactive platform marker into an unconditional dependency and promoting the native resolver failure to universal UNSAT.
+
+No change was made to research/REVISED_TRACE_SCHEMA.md.
+
+### Interpretation
+
+This strengthens:
+- H2a: real structured evidence exists in resolver/provider layers;
+- H2b: the revised semantic contract survives substantially more realistic cases;
+- H2c: independent verification remains possible for a nontrivial reduced case.
+
+It does not establish H2d. Stable portable cross-resolver interchange remains unproven.
+
+### H2e separation
+
+**H2e remains NOT TESTED.**
+
+There are still **0 substantive maintainer responses**. The real-world corpus is technical evidence, not maintainer validation, ecosystem acceptance, adoption, or endorsement.
+
+Production architecture remains NOT APPROVED.
+
+## Updated research conclusion
+
+The current strongest defensible statement is:
+
+> The revised resolvewhy-trace semantic contract survives the tested real-world adversarial corpus and can carry enough trustworthy evidence for independent verification in selected nontrivial cases, while correctly refusing proofs when critical evidence is incomplete. Cross-resolver interchange stability and maintainer validation remain open empirical questions.
+
+The project remains in research/falsification mode; this result does not justify production adapters or a production trace framework.
