@@ -125,3 +125,26 @@ A controlled resolvelib capture can already be collected through public provider
 - pipgrip: https://github.com/ddelange/pipgrip
 
 **Public RFC status:** publication candidate for the experimental research repository.
+
+## Final research-state addendum — 2026-09-21
+
+The research conducted after the initial draft narrowed the semantic contract substantially. The later validated model is described in `research/REVISED_TRACE_SCHEMA.md` and the final proof-supporting artifact requirements in `research/TRACE_PROOF_ARTIFACT_SPEC.md`.
+
+The current research understanding adds the following distinctions to the experimental model:
+
+- candidate identity is opaque and may be source/VCS/path-qualified;
+- candidate/artifact identity are separate when artifact feasibility matters;
+- runtime context is distinct from resolution policy;
+- candidate completeness is scoped to an explicit candidate domain and requires attestation for exhaustive claims;
+- evaluation domain is explicit for quantified multi-environment claims;
+- proof claims explicitly bind result kind, quantifier, evaluation domain and semantic premises;
+- derived proof premises require provenance/evidence reachability;
+- resolver-native conflict/derivation structures remain namespaced rather than universalized.
+
+## Final evidence position
+
+The technical validation program now reports a bounded positive result: the trace-only proof-artifact boundary has been validated for the tested finite semantic fragment, including independent SAT/UNSAT reconstruction and subset-minimality checks from serialized traces. This does not establish an ecosystem-wide standard or stable public interchange API.
+
+H2d is **PARTIALLY SUPPORTED**. H2e remains **NOT TESTED**; there is no substantive maintainer feedback to incorporate.
+
+The RFC remains an experimental research artifact. Its original illustrative model is retained as historical context; the later research documents are authoritative for the current semantic boundary and validation status.
