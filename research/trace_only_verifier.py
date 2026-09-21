@@ -64,7 +64,12 @@ def structural(t):
 
 def candidate_usable(c,t,env):
     rp=c.get('requires_python')
-    if rp=='>=3.10' and env['id']=='py3.9-linux': return False
+    if rp=='>=3.10' and env['id'].startswith('py3.9-'): return False
+    if rp is not None and rp != '>=3.10':
+        return False
+    for a in t.get('artifacts', []):
+        if a.get('candidate_ref') == c.get('id') and a.get('compatible') is False:
+            return False
     return True
 
 def branch_sat(t,env):
@@ -122,7 +127,13 @@ def verify(t):
         return 'INSUFFICIENT_EVIDENCE',results
     if t['trace_scope']=='existential':
         return ('VERIFIED_SAT',results) if any(results) else ('VERIFIED_UNSAT',results)
-    return 'INSUFFICIENT_EVIDENCE','branch scope requires explicit branch selector'
+    if t['trace_scope']=='branch':
+        branch_ref=t['proof_claim'].get('branch_ref')
+        if not branch_ref or branch_ref not in {e.get('id') for e in t['evaluation_domain']}:
+            return 'INVALID_TRACE','branch claim lacks valid branch_ref'
+        selected=[x for x in t['evaluation_domain'] if x.get('id')==branch_ref]
+        return ('VERIFIED_SAT',[branch_sat(t,selected[0])]) if branch_sat(t,selected[0]) else ('VERIFIED_UNSAT',[branch_sat(t,selected[0])])
+    return 'INVALID_TRACE','unsupported trace scope'
 
 def sat_fixture():
     t=base_trace()
@@ -138,7 +149,7 @@ def base_trace():
       'schema':'resolvewhy-trace/research-2026', 'trace_scope':'universal',
       'requirements':[{'id':'root:a','package':'a','op':'==','version':'1.0'}],
       'candidates':[{'id':'a@1','package':'a','version':'1.0'},{'id':'x@1','package':'x','version':'1.0'},{'id':'x@2','package':'x','version':'2.0'}],
-      'artifacts':[{'id':'art:a1','candidate_ref':'a@1'}],
+      'artifacts':[{'id':'art:a1','candidate_ref':'a@1','compatible':True}],
       'dependencies':[{'id':'dep:a-x','parent_candidate':'a@1','requirement':{'package':'x','op':'>=','version':'2.0'},'active':True}],
       'runtime_contexts':[{'id':'env:py3.13-linux','python':'3.13','platform':'linux'}],
       'evaluation_domain':[{'id':'py3.13-linux'}],
