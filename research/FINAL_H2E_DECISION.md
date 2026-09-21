@@ -147,7 +147,7 @@ The strongest defensible technical statement is:
 
 ## Final research decision — historical stage
 
-**CONTINUE RESEARCH** was the status at this intermediate stage. It is superseded by the later trace-only, projection, and final semantic-boundary work recorded below.
+**CONTINUE RESEARCH** was the status at an intermediate stage; it is superseded by the final current-status sections below.
 
 Current status: technical validation complete for the declared semantic fragment; H2d PARTIALLY SUPPORTED; H2e NOT TESTED; production implementation remains a separate future decision.
 
