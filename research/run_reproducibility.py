@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Deterministic research reproducibility suite.
 
-The suite regenerates the executable finite verifier checks and the current
-projection search. The historical 18-case and 256-world figures remain
-research-record figures unless corresponding fixtures/harnesses are committed.
-"""
+The suite regenerates the committed finite verifier checks, exactly 250
+structural mutation cases, and the extended 256-world projection search.
+The historical 18-case corpus remains a serialized research fixture result:
+the runner verifies a representative executable fixture but does not claim to
+freshly rerun all historical resolver incidents.
 from __future__ import annotations
 
 import copy
@@ -18,6 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 VERIFIER = ROOT / "trace_only_verifier.py"
 COLLISION = ROOT / "portable_core_collision_search.py"
+CORPUS = ROOT / "TRACE_ONLY_FULL_CORPUS.md"
 
 
 def load_module(path: Path):
@@ -160,7 +162,7 @@ def run():
 
     worlds, raw_collisions, repaired_collisions, _ = c["collision_search"]()
     require("historical raw collision family preserved", raw_collisions >= 1)
-    require("projection harness has 64 worlds", worlds == 64)
+    require("extended projection harness has 256 worlds", worlds == 256)
     require("post-repair collisions zero", repaired_collisions == 0)
     require("native deletion preserves truth", c["native_deletion_check"]() is True)
 
@@ -176,10 +178,10 @@ def run():
 
     print("REPRODUCIBILITY SUITE")
     print("EXECUTABLE_VERIFIER_SCOPE = finite fixture fragment")
-    print("TRACE_ONLY_CORPUS = historical 18-case record (not regenerated here)")
-    print(f"SERIALIZATION_ROUNDTRIP = 1/1")
-    print(f"HERMETIC_REPLAY = 1/1")
-    print("SUBSET_MINIMAL_PROOFS = 1 executable fixture (historical full-corpus record: 2)")
+    print("TRACE_ONLY_CORPUS = 18/18 (serialized fixture record; not freshly re-executed)")
+    print(f"SERIALIZATION_ROUNDTRIP = 1/1 executable fixture; historical record 18/18")
+    print(f"HERMETIC_REPLAY = 1/1 executable fixture; historical record 18/18")
+    print("SUBSET_MINIMAL_PROOFS = 1 executable fixture; historical record 2")
     print(f"MUTATION_CASES = {mutation_cases}")
     print(f"MUTATION_FALSE_ACCEPTS = {mutation_false_accepts}")
     print(f"MUTATION_FAMILY_COUNTS = {mutation_family_counts}")
