@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Protocol
-from urllib.parse import urlparse
 
 from resolvewhy.model import (
     ArtifactSelectionStatus,
@@ -417,26 +416,34 @@ class AdapterContext:
                 )
 
 
-class _ObjectIds:
+class _SemanticIds:
     def __init__(self) -> None:
-        self._ids: dict[int, str] = {}
+        self._object_ids: dict[int, str] = {}
+        self._semantic_ids: dict[object, str] = {}
 
-    def get(self, obj: object, prefix: str, counter: list[int]) -> str:
-        key = id(obj)
-        if key not in self._ids:
+    def get(
+        self,
+        obj: object,
+        semantic_key: object,
+        prefix: str,
+        counter: list[int],
+        *,
+        semantic_complete: bool = True,
+    ) -> str:
+        object_key = id(obj)
+        if object_key in self._object_ids:
+            return self._object_ids[object_key]
+
+        if semantic_complete and semantic_key in self._semantic_ids:
+            value = self._semantic_ids[semantic_key]
+        else:
             counter[0] += 1
-            self._ids[key] = f"{prefix}:{counter[0]:04d}"
-        return self._ids[key]
+            value = f"{prefix}:{counter[0]:04d}"
+            if semantic_complete:
+                self._semantic_ids[semantic_key] = value
 
-
-def _native_ref(
-    obj: object,
-    kind: ReferenceKind,
-    ids: _ObjectIds,
-    prefix: str,
-    counter: list[int],
-) -> TraceRef:
-    return TraceRef(kind, ids.get(obj, prefix, counter))
+        self._object_ids[object_key] = value
+        return value
 
 
 def normalize_capture(
@@ -453,13 +460,39 @@ def normalize_capture(
 
     candidate_models: list[Candidate] = []
     candidate_views: dict[str, CandidateView] = {}
+    candidate_ids_by_semantics: dict[object, str] = {}
     native_candidate_to_ref: dict[int, str] = {}
+
+    def _merge_candidate_views(existing: CandidateView, incoming: CandidateView) -> CandidateView:
+        artifacts = tuple(dict.fromkeys(existing.artifacts + incoming.artifacts))
+        requires_python = tuple(dict.fromkeys(existing.requires_python + incoming.requires_python))
+        unsupported = tuple(dict.fromkeys(existing.unsupported_reasons + incoming.unsupported_reasons))
+        return CandidateView(
+            package=existing.package,
+            version=existing.version,
+            kind=existing.kind,
+            source_ref=existing.source_ref,
+            origin=existing.origin,
+            artifacts=artifacts,
+            requires_python=requires_python,
+            identity_complete=existing.identity_complete and incoming.identity_complete,
+            unsupported_reasons=unsupported,
+        )
 
     def candidate_id(native: object) -> str:
         view = semantics.candidate_view(native)
-        ref = candidate_ids.get(native, "cand", counters)
+        semantic_key = view.identity_key
+        ref = candidate_ids_by_semantics.get(semantic_key)
+        if ref is None or not view.identity_complete:
+            if ref is None:
+                counters[0] += 1
+                ref = f"cand:{counters[0]:04d}"
+            candidate_ids_by_semantics.setdefault(semantic_key, ref)
         native_candidate_to_ref[id(native)] = ref
-        candidate_views.setdefault(ref, view)
+        if ref in candidate_views:
+            candidate_views[ref] = _merge_candidate_views(candidate_views[ref], view)
+        else:
+            candidate_views[ref] = view
         return ref
 
     # First pass: every candidate observed in matches, dependencies, pins, and rejections.
@@ -502,11 +535,16 @@ def normalize_capture(
     dependency_events: list[DependencyEvent[object, object]] = list(buffer.dependencies)
 
     requirements: list[Requirement] = []
-    requirement_event_refs: list[tuple[RequirementEvent[object, object], str, RequirementView]] = []
+    requirement_event_refs: list[
+        tuple[RequirementEvent[object, object], str, RequirementView, str]
+    ] = []
 
     for event in requirement_events:
         view = semantics.requirement_view(event.requirement)
-        ref = requirement_ids.get(event.requirement, "req", counters)
+        ref = f"req:{event.sequence:04d}"
+        identifier = semantics.identifier_text(
+            getattr(event.requirement, "name", getattr(event.requirement, "project_name", view.package))
+        )
         parent_ref = None if event.parent is None else candidate_id(event.parent)
         requirements.append(
             Requirement(
@@ -519,7 +557,7 @@ def normalize_capture(
                 evidence_refs=(TraceRef(ReferenceKind.EVIDENCE, f"obs:req:{ref}"),),
             )
         )
-        requirement_event_refs.append((event, ref, view))
+        requirement_event_refs.append((event, ref, view, identifier))
 
     # Requirements returned by get_dependencies() should normally be followed by
     # adding_requirement(). If not, synthesize a local requirement node from the
@@ -641,7 +679,7 @@ def normalize_capture(
         req_ref, view, synthesized = requirement_for_dependency(event)
         dependency_event_to_req[event.sequence] = (req_ref, view, synthesized)
 
-    for event, req_ref, view in requirement_event_refs:
+    for event, req_ref, view, identifier in requirement_event_refs:
         evidence_id = f"obs:req:{req_ref}"
         state = (
             EvidenceStateKind.INCOMPLETE
@@ -668,7 +706,6 @@ def normalize_capture(
             ),
         )
 
-    existing_req_ids = {str(req.id) for req in requirements}
     for event in dependency_events:
         req_ref, view, synthesized = dependency_event_to_req[event.sequence]
         parent_ref = candidate_id(event.parent)
@@ -691,12 +728,18 @@ def normalize_capture(
             EvidenceStateKind.INCOMPLETE if synthesized or not view.complete else EvidenceStateKind.KNOWN_FACT,
             supports=(TraceRef(ReferenceKind.DEPENDENCY, edge_ref),),
         )
-        if synthesized and req_ref not in existing_req_ids:
-            existing_req_ids.add(req_ref)
+        if synthesized:
+            evidence_id = f"obs:req:{req_ref}"
+            add_evidence(
+                evidence_id,
+                "resolver-requirement",
+                EvidenceStateKind.INCOMPLETE,
+                supports=(TraceRef(ReferenceKind.REQUIREMENT, req_ref),),
+            )
             add_requirement_constraint(
                 req_ref,
                 view,
-                evidence_id=f"obs:req:{req_ref}",
+                evidence_id=evidence_id,
                 parent_candidate_ref=parent_ref,
                 constraint_kind=SemanticConstraintKind.DEPENDENCY,
             )
@@ -786,7 +829,6 @@ def normalize_capture(
 
     # Candidate-domain observations are deliberately not treated as exhaustive unless
     # the caller supplies an explicit attestation.
-    domain_ids: dict[str, str] = {}
     candidate_domains: list[CandidateDomain] = []
     match_groups: dict[str, list[str]] = {}
     for event in sorted(buffer.matches, key=lambda item: item.sequence):
@@ -796,16 +838,12 @@ def normalize_capture(
             match_groups[event.identifier].append(ref)
 
     all_identifiers = list(match_groups)
-    for event, _, _ in requirement_event_refs:
-        identifier = semantics.identifier_text(
-            getattr(event.requirement, "name", getattr(event.requirement, "project_name", event.requirement))
-        )
+    for _, _, _, identifier in requirement_event_refs:
         if identifier not in all_identifiers:
             all_identifiers.append(identifier)
 
     for index, identifier in enumerate(all_identifiers, start=1):
         domain_id = f"domain:{index:04d}"
-        domain_ids[identifier] = domain_id
         refs = tuple(match_groups.get(identifier, ()))
         scope = context.candidate_domain_scopes.get(identifier, CandidateDomainScope())
         attestation = context.coverage_attestations.get(identifier)
@@ -823,9 +861,9 @@ def normalize_capture(
                 id=domain_id,
                 identifier=identifier,
                 requirement_refs=tuple(
-                    str(req.id)
-                    for req in requirements
-                    if str(req.package) == identifier
+                    req_ref
+                    for _, req_ref, _, req_identifier in requirement_event_refs
+                    if req_identifier == identifier
                 ),
                 candidate_refs=refs,
                 scope=scope,
@@ -851,7 +889,7 @@ def normalize_capture(
         premise_refs: list[TraceRef] = []
         for requirement, parent in event.information:
             for candidate_req_event, req_ref, _ in requirement_event_refs:
-                if candidate_req_event.requirement is requirement:
+                    if candidate_req_event.requirement is requirement:
                     premise_refs.append(TraceRef(ReferenceKind.REQUIREMENT, req_ref))
                     break
             if parent is not None:
@@ -924,7 +962,7 @@ def normalize_capture(
     unsupported_reasons = []
     for view in candidate_views.values():
         unsupported_reasons.extend(view.unsupported_reasons)
-    for _, _, view in requirement_event_refs:
+    for _, _, view, _ in requirement_event_refs:
         unsupported_reasons.extend(view.unsupported_reasons)
 
     # Any unknown candidate-domain completeness, unsupported normalization, or incomplete
@@ -938,6 +976,11 @@ def normalize_capture(
         else EvidenceStateKind.KNOWN_FACT
     )
 
+    if not semantic_constraints:
+        raise AdapterNormalizationError(
+            "resolver emitted no semantic requirements; refusing to fabricate proof premises"
+        )
+
     premise_refs = tuple(str(constraint.id) for constraint in semantic_constraints)
     claim = ProofClaim(
         id="claim:resolver-outcome",
@@ -949,7 +992,7 @@ def normalize_capture(
             else f"eval:{context.runtime_context.id}"
         ),
         status_claim=status,
-        premise_refs=premise_refs or ("c:empty-placeholder",),
+        premise_refs=premise_refs,
         subset_minimal_claim=False,
     )
 
@@ -958,11 +1001,6 @@ def normalize_capture(
         kind=EvaluationDomainKind.SINGLETON_ENVIRONMENT,
         environment_refs=(context.runtime_context.id,),
     )
-
-    if not semantic_constraints:
-        raise AdapterNormalizationError(
-            "resolver emitted no semantic requirements; refusing to fabricate proof premises"
-        )
 
     return Trace(
         schema="resolvewhy-trace/1.0",
