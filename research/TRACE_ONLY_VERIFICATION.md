@@ -231,3 +231,24 @@ The strongest supported statement is:
 This does not establish arbitrary resolver semantics, ecosystem-wide interchange, maintainer acceptance, or production readiness.
 
 H2d remains PARTIALLY SUPPORTED. H2e remains NOT TESTED.
+
+
+## Executable implementation boundary — 2026-09-21
+
+The committed `research/trace_only_verifier.py` is a research fixture verifier, not a general dependency resolver or universal proof engine.
+
+It directly evaluates only:
+- normalized version constraints supported by the fixture operators;
+- explicit boolean dependency-edge activation;
+- the recorded `Requires-Python >=3.10` compatibility rule;
+- finite evaluation-domain quantification for existential/universal claims;
+- explicit branch selection through `proof_claim.branch_ref`;
+- complete candidate-domain coverage with attestation;
+- proof-premise selection from declared semantic constraints;
+- provenance reachability from proof premises to in-scope requirement/dependency/evidence references;
+- artifact-reference integrity and the tested artifact `compatible` flag;
+- the fixed executable policy contract used by the fixture.
+
+It does not evaluate arbitrary PEP 508 markers, general prerelease/source policies, full artifact selection/build semantics, complete lockfile semantics, generic virtual/provided packages, or arbitrary resolver-specific metadata.
+
+These omissions are deliberate. Unsupported semantics must not be inferred; the executable verifier therefore returns `INSUFFICIENT_EVIDENCE` or `INVALID_TRACE` rather than silently broadening its proof domain.
