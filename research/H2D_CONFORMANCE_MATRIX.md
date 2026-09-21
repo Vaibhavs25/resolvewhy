@@ -49,15 +49,15 @@
 
 ### pip/resolvelib
 
-The public provider contract defines `identify`, `find_matches`, requirement-parent information, and known incompatibilities. Candidate enumeration is provider-owned, so returned candidates are not automatically a globally exhaustive index universe. citeturn246071view0turn438838view3
+The public provider contract defines `identify`, `find_matches`, requirement-parent information, and known incompatibilities. Candidate enumeration is provider-owned, so returned candidates are not automatically a globally exhaustive index universe. 
 
 ### uv
 
-uv uses a PubGrub-based resolver and explicitly models incompatibilities, forking across marker/Python domains, URL dependencies, and Python compatibility. citeturn755747search0
+uv uses a PubGrub-based resolver and explicitly models incompatibilities, forking across marker/Python domains, URL dependencies, and Python compatibility. 
 
 ### Poetry/Mixology
 
-Poetry's solver exposes first-class incompatibility/cause concepts and detailed Python/dependency conflict derivations in failure output. These are suitable inputs to the semantic core but should not become universal native object types. citeturn755747search4turn703071search5
+Poetry's solver exposes first-class incompatibility/cause concepts and detailed Python/dependency conflict derivations in failure output. These are suitable inputs to the semantic core but should not become universal native object types. 
 
 ### pipgrip/PubGrub
 
