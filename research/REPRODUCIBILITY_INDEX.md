@@ -121,3 +121,30 @@ python research/run_reproducibility.py --json
 ```
 
 Both entry points are network-free and use only committed research code.
+
+## Current executable path — 2026-09-21
+
+The clean clone-and-run entry point is:
+
+```bash
+python research/run_reproducibility.py
+```
+
+The companion test entry point is:
+
+```bash
+python -m unittest research.test_reproducibility
+```
+
+The current runner computes the following rather than printing stored counts:
+
+- 18/18 serialized semantic fixture classifications;
+- 18/18 JSON round trips;
+- 18/18 hermetic isolated replays;
+- two executable subset-minimality proofs (RW-09 and RW-14);
+- exactly 250 distinct mutation cases with zero false verified-proof acceptances;
+- 256 projection worlds with zero post-repair semantic collisions.
+
+The 18-case inputs are deterministic serialized fixtures corresponding to the documented corpus classifications. They are not fresh executions of the historical public resolver incidents. Resolver/source analysis and public issue evidence remain historical research records.
+
+The deterministic fixture payload is stored at research/fixtures/trace_corpus.py and is checksum-protected with SHA-256 88cadf682c2a7c7d3c91c861e8cc673c92f17134f2a4091b46bafda3b733f8bb.
