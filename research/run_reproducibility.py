@@ -39,21 +39,24 @@ def mutation_campaign(v):
         "dependency_references", "proof_premises", "evidence_states",
     ]
     results = []
-    n_variants = 23  # 11*22=242 plus eight deterministic extras below.
+    # 11 mutation families x 22 variants = 242, plus 8 targeted cases = 250.
     for i in range(242):
         case = copy.deepcopy(base)
         fam = taxonomy[i % len(taxonomy)]
         variant = i // len(taxonomy)
         if fam == "ids":
-            case["candidates"][variant % len(case["candidates"])]["id"] = None
+            target = case["candidates"][variant % len(case["candidates"])]
+            target["id"] = None
+            target["package"] = f"corrupt-package-{variant}"
         elif fam in {"references", "dependency_references"}:
             case["dependencies"][0]["parent_candidate"] = f"missing-{variant}"
         elif fam == "arrays":
-            case["candidate_domains"][0]["candidate_ids"] = ["x@1"]
+            case["candidate_domains"][0]["candidate_ids"] = [f"ghost-array-{variant}"]
         elif fam == "evaluation_domain":
             case["evaluation_domain"][0]["id"] = f"env-corrupt-{variant}"
         elif fam == "quantifiers":
             case["proof_claim"]["quantifier"] = ["existential", "universal", "branch", "invalid"][variant % 4]
+            case["proof_claim"]["evaluation_domain_ref"] = f"missing-domain-{variant}"
         elif fam == "coverage_attestation":
             if variant % 2 == 0:
                 case["candidate_domains"][0]["coverage"].pop("attestation", None)
@@ -70,6 +73,7 @@ def mutation_campaign(v):
             case["proof_claim"]["premise_refs"] = [f"missing-premise-{variant}"]
         elif fam == "evidence_states":
             case["evidence_state"]["overall"] = ["unknown", "incomplete", "missing"][variant % 3]
+            case["evidence_state"]["mutation_ref"] = f"evidence-{variant}"
         raw = json.dumps(case, sort_keys=True, separators=(",", ":"))
         results.append((i, fam, raw, v["verify"](case)[0]))
     extras = []
