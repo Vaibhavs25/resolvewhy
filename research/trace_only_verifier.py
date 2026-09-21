@@ -100,10 +100,6 @@ def verify(t):
     if any(q.get('coverage',{}).get('status')!='complete' for q in t['candidate_domains']): return 'INSUFFICIENT_EVIDENCE','candidate coverage incomplete'
     results=[branch_sat(t,e) for e in t['evaluation_domain'] if isinstance(e,dict) and 'id' in e]
     if len(results)!=len(t['evaluation_domain']): return 'INVALID_TRACE','malformed evaluation domain entry'
-    if claim := t.get('proof_claim'):
-        claimed = claim.get('status_claim')
-    else:
-        claimed = None
     if t['trace_scope']=='universal':
         if all(not x for x in results): return 'VERIFIED_UNSAT',results
         if all(x for x in results): return 'VERIFIED_SAT',results
