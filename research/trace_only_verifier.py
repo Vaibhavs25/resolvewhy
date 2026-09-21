@@ -140,9 +140,10 @@ def branch_sat(t,env):
 
 
 def verify(t):
-    ok,why=structural(t)
-    if not ok:return 'INVALID_TRACE',why
-    if t['evidence_state'].get('overall') in {'missing','incomplete','unknown'}: return 'INSUFFICIENT_EVIDENCE','evidence incomplete'
+    try:
+        ok,why=structural(t)
+        if not ok:return 'INVALID_TRACE',why
+        if t['evidence_state'].get('overall') in {'missing','incomplete','unknown'}: return 'INSUFFICIENT_EVIDENCE','evidence incomplete'
     # The finite executable fragment currently supports fixed prerelease/source policy
     # only structurally; unsupported policy semantics are not inferred.
     policy=t['resolution_policy']
@@ -164,7 +165,9 @@ def verify(t):
         selected=[x for x in t['evaluation_domain'] if x.get('id')==branch_ref]
         result=branch_sat(t,selected[0])
         return ('VERIFIED_SAT',[result]) if result else ('VERIFIED_UNSAT',[result])
-    return 'INVALID_TRACE','unsupported trace scope'
+        return 'INVALID_TRACE','unsupported trace scope'
+    except (ValueError, KeyError, TypeError, IndexError) as exc:
+        return 'INVALID_TRACE', f'uninterpretable finite semantic data: {exc}'
 
 def sat_fixture():
     t=base_trace()
