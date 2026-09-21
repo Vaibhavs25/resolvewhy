@@ -49,3 +49,20 @@ It does not, by itself, freshly reproduce:
 - maintainer validation.
 
 Those remain explicitly documented evidence classes.
+
+
+## Test entry point
+
+The repository also contains an explicit standard-library test module:
+
+```bash
+python -m unittest research.test_reproducibility
+```
+
+This covers SAT/UNSAT reconstruction, subset-minimality, serialization, structural integrity, coverage, proof claims, provenance, activation, artifact feasibility, branch scope, the 250-case campaign, and the 256-world projection search.
+
+For machine-readable output from the aggregate runner:
+
+```bash
+python research/run_reproducibility.py --json
+```
