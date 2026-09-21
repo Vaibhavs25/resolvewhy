@@ -343,7 +343,7 @@ class DefaultPipSemantics:
                     compatible=None,
                     selection_status=(
                         ArtifactSelectionStatus.YANKED
-                        if getattr(source_link, "yanked_reason", None)
+                        if getattr(source_link, "yanked_reason", None) is not None
                         else ArtifactSelectionStatus.UNKNOWN
                     ),
                 ),
@@ -416,36 +416,6 @@ class AdapterContext:
                 )
 
 
-class _SemanticIds:
-    def __init__(self) -> None:
-        self._object_ids: dict[int, str] = {}
-        self._semantic_ids: dict[object, str] = {}
-
-    def get(
-        self,
-        obj: object,
-        semantic_key: object,
-        prefix: str,
-        counter: list[int],
-        *,
-        semantic_complete: bool = True,
-    ) -> str:
-        object_key = id(obj)
-        if object_key in self._object_ids:
-            return self._object_ids[object_key]
-
-        if semantic_complete and semantic_key in self._semantic_ids:
-            value = self._semantic_ids[semantic_key]
-        else:
-            counter[0] += 1
-            value = f"{prefix}:{counter[0]:04d}"
-            if semantic_complete:
-                self._semantic_ids[semantic_key] = value
-
-        self._object_ids[object_key] = value
-        return value
-
-
 def normalize_capture(
     captured: CapturedRun,
     context: AdapterContext,
@@ -457,7 +427,8 @@ def normalize_capture(
     counters = [0]
     candidate_models: list[Candidate] = []
     candidate_views: dict[str, CandidateView] = {}
-    candidate_ids_by_semantics: dict[object, str] = {}
+    semantic_candidate_ids: dict[tuple[str, str | None, str, str | None, str | None], str] = {}
+    native_candidate_ids: dict[int, str] = {}
     def _merge_candidate_views(existing: CandidateView, incoming: CandidateView) -> CandidateView:
         artifacts = tuple(dict.fromkeys(existing.artifacts + incoming.artifacts))
         requires_python = tuple(dict.fromkeys(existing.requires_python + incoming.requires_python))
@@ -475,19 +446,30 @@ def normalize_capture(
         )
 
     def candidate_id(native: object) -> str:
+        object_key = id(native)
+        if object_key in native_candidate_ids:
+            return native_candidate_ids[object_key]
+
         view = semantics.candidate_view(native)
         semantic_key = view.identity_key
-        ref = candidate_ids_by_semantics.get(semantic_key)
-        if ref is None or not view.identity_complete:
+        if view.identity_complete:
+            ref = semantic_candidate_ids.get(semantic_key)
             if ref is None:
                 counters[0] += 1
                 ref = f"cand:{counters[0]:04d}"
-            candidate_ids_by_semantics.setdefault(semantic_key, ref)
+                semantic_candidate_ids[semantic_key] = ref
+        else:
+            # Incomplete identity cannot safely collapse distinct native objects.
+            counters[0] += 1
+            ref = f"cand:{counters[0]:04d}"
+
+        native_candidate_ids[object_key] = ref
         if ref in candidate_views:
             candidate_views[ref] = _merge_candidate_views(candidate_views[ref], view)
         else:
             candidate_views[ref] = view
         return ref
+
 
     # First pass: every candidate observed in matches, dependencies, pins, and rejections.
     observed_candidates: list[object] = []
@@ -512,8 +494,9 @@ def normalize_capture(
         observe_candidate(event.candidate)
 
     for native in observed_candidates:
-        ref = candidate_id(native)
-        view = candidate_views[ref]
+        candidate_id(native)
+
+    for ref, view in candidate_views.items():
         candidate_models.append(
             Candidate(
                 id=ref,
@@ -521,9 +504,14 @@ def normalize_capture(
                 version=view.version,
                 kind=view.kind,
                 source_ref=view.source_ref,
-                origin=view.origin,
+                origin=(
+                    view.origin
+                    if view.kind is not CandidateKind.REGISTRY
+                    else None
+                ),
             )
         )
+
 
     requirement_events: list[RequirementEvent[object, object]] = list(buffer.requirements)
     dependency_events: list[DependencyEvent[object, object]] = list(buffer.dependencies)
