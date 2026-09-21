@@ -11,6 +11,7 @@ def satv(v, op, rhs): return OPS[op](ver(v),ver(rhs))
 
 def structural(t):
     required=['schema','trace_scope','requirements','candidates','artifacts','dependencies','runtime_contexts','evaluation_domain','resolution_policy','candidate_domains','semantic_constraints','provenance','evidence_state','proof_claim']
+
     missing=[x for x in required if x not in t]
     if missing: return False,'missing required fields: '+','.join(missing)
     if t['trace_scope'] not in {'existential','universal','branch'}: return False,'invalid trace scope'
@@ -45,6 +46,11 @@ def structural(t):
         cov=q.get('coverage',{})
         if cov.get('status')=='complete' and not isinstance(cov.get('attestation'),dict): return False,'complete coverage lacks attestation'
         if any(x not in ids for x in q.get('candidate_ids',[])): return False,'dangling coverage candidate'
+        att=cov.get('attestation')
+        if isinstance(att,dict):
+            refs=att.get('evidence_refs',[])
+            if not isinstance(refs,list) or any(not isinstance(x,str) for x in refs) or not refs:
+                return False,'invalid coverage evidence references'
     if not t['provenance']: return False,'missing provenance'
     prov_ids=[p.get('id') for p in t['provenance'] if isinstance(p,dict)]
     if len(prov_ids)!=len(t['provenance']) or any(x is None for x in prov_ids) or len(prov_ids)!=len(set(prov_ids)): return False,'invalid provenance IDs'
@@ -53,13 +59,27 @@ def structural(t):
         a=q.get('coverage',{}).get('attestation',{})
         if isinstance(a,dict): evidence_refs.update(a.get('evidence_refs',[]))
     claimed=list(claim.get('premise_refs',[]))
-    if not claimed.issubset(sem_by_id): return False,'proof premise is not a declared semantic constraint'
+    if not claimed or not claimed.issubset(sem_by_id): return False,'proof premise is not a declared semantic constraint'
+    prov_by_id={p.get('id'):p for p in t['provenance'] if isinstance(p,dict)}
+    visited=set()
+    def reachable_from_premise(premise_id,trail=()):
+        if premise_id in trail: return False
+        for p in t['provenance']:
+            if not isinstance(p,dict) or premise_id not in p.get('premise_refs',[]): continue
+            pid=p.get('id')
+            if pid in visited: return True
+            refs=p.get('evidence_refs',[])
+            raw_refs=p.get('source_refs',[])
+            if isinstance(refs,list) and any(ref in evidence_refs for ref in refs):
+                visited.add(pid); return True
+            if isinstance(raw_refs,list) and any(ref in evidence_refs or ref in dep_ids or ref in req_ids for ref in raw_refs):
+                visited.add(pid); return True
+            for parent in p.get('premise_refs',[]):
+                if parent != premise_id and reachable_from_premise(parent,trail+(premise_id,)):
+                    visited.add(pid); return True
+        return False
     for sid in claimed:
-        if sid not in sem_by_id: return False,'proof premise is not a declared semantic constraint'
-        matches=[p for p in t['provenance'] if isinstance(p,dict) and sid in p.get('premise_refs',[])]
-        if not matches: return False,'proof premise lacks provenance'
-        if not any(any(ref in evidence_refs or ref in dep_ids or ref in req_ids for ref in p.get('premise_refs',[])) for p in matches):
-            return False,'proof premise provenance lacks in-scope evidence'
+        if not reachable_from_premise(sid): return False,'proof premise provenance is not reachable'
     return True,'ok'
 
 def candidate_usable(c,t,env):
@@ -156,7 +176,7 @@ def base_trace():
       'resolution_policy':{'prerelease':'disallow','source_selection':'fixed'},
       'candidate_domains':[{'id':'domain:x','candidate_ids':['x@1','x@2'],'scope':{'sources':['index:A']},'coverage':{'status':'complete','attestation':{'kind':'authoritative_finite_domain','evidence_refs':['obs:x']}}}],
       'semantic_constraints':[{'id':'c:root','kind':'requirement','source_ref':'root:a'},{'id':'c:dep','kind':'dependency','source_ref':'dep:a-x'}],
-      'provenance':[{'id':'p:root','premise_refs':['root:a'],'claim':'root requirement'},{'id':'p:dep','premise_refs':['dep:a-x'],'claim':'dependency metadata'},{'id':'p:domain','premise_refs':['obs:x'],'claim':'candidate domain complete'}],
+      'provenance':[{'id':'p:root','premise_refs':['c:root'],'evidence_refs':['obs:root'],'claim':'root requirement'},{'id':'p:dep','premise_refs':['c:dep'],'evidence_refs':['obs:dep'],'claim':'dependency metadata'},{'id':'p:domain','premise_refs':['obs:x'],'evidence_refs':['obs:x'],'claim':'candidate domain complete'}],
       'evidence_state':{'overall':'known'},
       'proof_claim':{'id':'claim:1','kind':'satisfiability','quantifier':'universal','evaluation_domain_ref':'evaluation_domain','status_claim':'UNSAT','premise_refs':['c:root','c:dep']},
       'claimed_core':['c:root','c:dep']
