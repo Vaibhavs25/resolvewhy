@@ -127,7 +127,7 @@ research/TRACE_FIELD_AUDIT.md
 | H2a | SUPPORTED narrowly | Real structured instrumentation exists through resolvelib; other systems expose rich structured internals |
 | H2b | PARTIALLY SUPPORTED | Normalization survives the tested cases after explicit coverage/identity/policy revisions |
 | H2c | SUPPORTED in controlled traces | Prior 6/6 real UNSAT trace verification and independent core validation |
-| H2d | UNPROVEN | Semantic concepts recur, but a stable portable external trace interface has not been established |
+| H2d | PARTIALLY SUPPORTED | Bounded semantic portability is supported for the tested resolver-shaped evidence; stable ecosystem-wide interchange is not established |
 | H2e | NOT TESTED | 0 substantive maintainer responses |
 
 ## What the experiment supports
@@ -145,15 +145,11 @@ The strongest defensible technical statement is:
 - whether difficult real-world build/artifact cases can be represented without excessive adapter complexity
 - whether downstream tooling would adopt the model
 
-## Final research decision
+## Final research decision — historical stage
 
-**CONTINUE RESEARCH**
+**CONTINUE RESEARCH** was the status at this intermediate stage. It is superseded by the later trace-only, projection, and final semantic-boundary work recorded below.
 
-More specifically:
-
-**The revised contract survives the current adversarial experiment, but production infrastructure remains unjustified.**
-
-The next high-value work is to expand adversarial real-world coverage or obtain substantive maintainer feedback. H2e remains a separate empirical gate.
+Current status: technical validation complete for the declared semantic fragment; H2d PARTIALLY SUPPORTED; H2e NOT TESTED; production implementation remains a separate future decision.
 
 No maintainer support, ecosystem adoption, standardization, or production readiness is claimed.
 
