@@ -14,6 +14,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 VERIFIER_PATH = HERE / "trace_only_verifier.py"
 COLLISION_PATH = HERE / "portable_core_collision_search.py"
+FIXTURE_PATH = HERE / "fixtures" / "trace_corpus.py"
 
 def load_module(path: Path, name: str):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -30,8 +31,9 @@ def require(label: str, condition: bool) -> None:
         raise AssertionError(label)
 
 
-def load_corpus(verifier) -> list[dict]:
-    data = verifier.corpus_cases()
+def load_corpus() -> list[dict]:
+    fixture = load_module(FIXTURE_PATH, "resolvewhy_corpus_fixture")
+    data = fixture.load()
     require("18 corpus fixtures", isinstance(data, list) and len(data) == 18)
     case_ids = [entry.get("case_id") for entry in data]
     require("unique corpus IDs", len(case_ids) == len(set(case_ids)))
@@ -241,7 +243,7 @@ def run():
     require("declared status is non-authoritative",
             verifier.verify(declared_status)[0] == "VERIFIED_UNSAT")
 
-    corpus = load_corpus(verifier)
+    corpus = load_corpus()
     corpus_results = []
     verifier_source = VERIFIER_PATH.read_text(encoding="utf-8")
     roundtrip_passes = 0
