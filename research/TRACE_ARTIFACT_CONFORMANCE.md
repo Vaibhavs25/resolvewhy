@@ -1,3 +1,7 @@
+## Executable alignment note
+
+The conformance evidence below records the historical 18-case and extended 256-world experiments. The current clean reproducibility runner does not regenerate those historical fixture sets; it regenerates the finite executable verifier fixture, one proof-minimality check, the 250 mutation campaign, and the current 64-world projection harness. See `research/REPRODUCIBILITY_INDEX.md`.
+
 The 18/18, 2-proof, and 256-world figures in this section are retained as historical research evidence. The current clean executable runner does not regenerate the full 18-case fixture set or the 256-world extended search; see research/REPRODUCIBILITY_INDEX.md for the exact executable boundary.
 
 ## Reproducibility boundary note
