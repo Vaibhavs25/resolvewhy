@@ -102,7 +102,7 @@ Recorded outcomes:
 - 18/18 isolated replay processes completed without resolver/provider/index/network/external-state access.
 - 2 nontrivial subset-minimal UNSAT proofs were independently reconstructed from serialized traces alone in the historical full-corpus record; the current executable runner rechecks one committed finite proof fixture.
 - 250 deterministic serialization mutations produced 0 incorrectly accepted verified proofs.
-- the historical extended search reported 256 post-repair projection worlds with 0 semantic collisions; the current committed projection harness independently regenerates its 64-world subset and reports 0 post-repair collisions there.
+- the historical extended search reported 256 post-repair projection worlds with 0 semantic collisions; the current committed projection harness independently regenerates a 64-world subset and reports 0 post-repair collisions there.
 - the declared resolver-result label was not trusted over independently reconstructed semantics.
 
 These counts are deliberately separated into executable and historical evidence in `research/REPRODUCIBILITY_INDEX.md`; none is presented as exhaustive testing of the semantic space.
