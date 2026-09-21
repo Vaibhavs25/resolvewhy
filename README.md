@@ -24,7 +24,7 @@ Within the tested finite semantic fragment, a serialized trace can act as a self
 
 The research record reports **18/18 trace-only classification agreement**, **18/18 serialization round-trip agreement**, **18/18 isolated replays**, **2** independently rechecked nontrivial subset-minimal UNSAT proofs, **250** serialization mutations with zero incorrectly accepted verified proofs, and an extended **256-world** post-repair projection search with zero semantic collisions.
 
-The clean executable reproducibility runner currently regenerates the finite verifier fixture, its SAT/UNSAT and minimality checks, exactly 250 deterministic mutation cases, and the committed 64-world projection harness. The 18-case and 256-world results remain historical research-record evidence rather than fresh output of the clean runner.
+The clean executable reproducibility runner currently regenerates the finite verifier fixture, its SAT/UNSAT and minimality checks, exactly 250 deterministic mutation cases, and the extended 256-world projection harness. The 18-case result remains historical research-record evidence rather than a fresh execution of every historical resolver incident; the 256-world projection search is part of the clean runner.
 
 These results are bounded experimental evidence, not universal correctness claims.
 
