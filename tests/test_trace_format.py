@@ -22,6 +22,8 @@ from resolvewhy.model import (
     ProofQuantifier,
 )
 from resolvewhy.trace import (
+    MAX_JSON_DEPTH,
+    MAX_TRACE_BYTES,
     SCHEMA,
     TraceDecodeError,
     TraceSerializationError,
@@ -72,9 +74,6 @@ class TraceFormatTests(unittest.TestCase):
 
     def test_nested_marker_preservation(self):
         trace = valid_trace()
-        marker = copy.deepcopy(trace.requirements[0].activation)
-        if marker is not None:
-            marker = None
         from resolvewhy.model import MarkerAtom, MarkerExpression
         activation = MarkerExpression(
             kind="and",
@@ -299,6 +298,32 @@ class TraceFormatTests(unittest.TestCase):
         encoded = serialize_trace(trace)
         self.assertIsInstance(encoded, bytes)
         encoded.decode("utf-8")
+
+    def test_serializer_rejects_unsupported_model_schema(self):
+        trace = replace(valid_trace(), schema="resolvewhy-trace/2.0")
+        with self.assertRaises(TraceSerializationError):
+            serialize_trace(trace)
+
+    def test_duplicate_json_key_rejected(self):
+        with self.assertRaises(TraceDecodeError):
+            deserialize_trace(b'{"schema":"resolvewhy-trace/1.0","schema":"resolvewhy-trace/1.0"}')
+
+    def test_nonstandard_json_constant_rejected(self):
+        with self.assertRaises(TraceDecodeError):
+            deserialize_trace(b'{"schema":NaN}')
+
+    def test_invalid_utf8_rejected(self):
+        with self.assertRaises(TraceDecodeError):
+            deserialize_trace(b"\xff\xfe")
+
+    def test_oversized_input_rejected(self):
+        with self.assertRaises(TraceDecodeError):
+            deserialize_trace(b" " * (MAX_TRACE_BYTES + 1))
+
+    def test_pathological_depth_rejected(self):
+        nested = "[" * (MAX_JSON_DEPTH + 1) + "]" * (MAX_JSON_DEPTH + 1)
+        with self.assertRaises(TraceDecodeError):
+            deserialize_trace(nested)
 
     def test_serializer_rejects_invalid_model_graph(self):
         trace = valid_trace()
