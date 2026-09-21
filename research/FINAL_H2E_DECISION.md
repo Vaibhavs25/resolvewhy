@@ -230,3 +230,24 @@ No tested semantic field was forced into NOT REPRESENTABLE.
 This establishes technical portability only for the tested resolver pair and cases. It does not establish ecosystem-wide interchange, API stability, adoption, or maintainer acceptance.
 
 **H2e remains NOT TESTED.** This experiment supplied no maintainer feedback and does not change the 0 substantive-response status.
+
+
+## Portable-core sufficiency update — 2026-09-21
+
+The latest falsification experiment tested the portable semantic proof core itself for projection collisions.
+
+It found one genuine semantic collision family: a single-environment satisfiable trace and a universal multi-environment trace can have identical pre-repair portable projections when both use the same active runtime context and the same universal/fork policy but differ in the declared environment domain. The universal case became UNSAT because the additional Python 3.9 branch violated the candidate's Requires-Python constraint.
+
+The smallest repair was to add explicit evaluation_domain proof scope to the semantic core. After the repair, the finite search over 64 pip-style and uv-style native fixture worlds produced 0 projection collisions. Native derivation and decision-state deletion still preserved semantic truth in the tested fragment.
+
+### Updated technical conclusion
+
+H2d remains **PARTIALLY SUPPORTED**. The portable proof core is sufficient only within a stated semantic fragment and requires explicit evaluation-domain information for quantified multi-environment claims.
+
+The revised schema was updated accordingly. This is a genuine narrowing of the proven boundary, not a claim of universal cross-resolver completeness.
+
+### H2e separation
+
+**H2e remains NOT TESTED.** The experiment used no maintainer feedback, sent no outreach, and does not alter the 0 substantive-response status.
+
+Production architecture remains NOT APPROVED.
