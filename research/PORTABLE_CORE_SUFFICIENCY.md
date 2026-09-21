@@ -223,3 +223,22 @@ Therefore the research claim should be narrowed to:
 > The portable semantic core is sufficient for the tested finite semantic fragment when proof scope is explicit, including an explicit evaluation domain for multi-environment claims; native resolver derivations and decision state are not required for correctness in that fragment.
 
 H2d remains partial rather than fully supported. H2e is unaffected and remains NOT TESTED.
+## Final semantic-boundary update — 2026-09-21
+
+The portable-core sufficiency result is now explicitly bounded by the final semantic-boundary audit.
+
+### Bounded sufficiency statement
+
+Within the tested finite semantic fragment, the portable core preserves enough satisfiability-relevant information for independent verification when the trace explicitly records requirements, parent-linked dependency edges, activation conditions, opaque/source-aware candidate identity, artifact identity when feasibility is artifact-dependent, runtime context, finite evaluation domains, resolution policy, scoped candidate-domain coverage with completeness attestation, semantic literals, provenance/evidence state, and proof-claim quantifier/domain binding.
+
+The experiments establish this only for the finite and explicitly serialized fragment exercised so far. They do not establish complete semantics for dynamic build backends, arbitrary source-tree metadata generation, full hash/reproducibility behavior, complete lockfile semantics, implicit virtual/provided packages, symbolic or infinite environment domains, every PEP 508 interaction, or future resolver-specific semantics.
+
+### Boundary-collision interpretation
+
+The prior genuine projection collision was repaired by explicit evaluation_domain. After that repair and the subsequent trace-only/projection tests, no additional collision was identified inside the declared finite fragment. The remaining near-boundary cases are treated as outside the current evidence boundary rather than silently generalized into the core.
+
+### Decision
+
+**BOUNDARY SURVIVES — NO NEW SEMANTIC DEFECT.**
+
+H2d remains PARTIALLY SUPPORTED and bounded to the tested semantic portability fragment.
