@@ -193,3 +193,17 @@ The proof-claim repair therefore resolves the previously observed quantifier/dom
 **H2e remains NOT TESTED.** The corpus and verifier experiments contain no maintainer feedback and do not count as maintainer validation.
 
 Production architecture remains NOT APPROVED.
+
+## Final semantic-boundary audit — 2026-09-21
+
+The final adversarial semantic-boundary/generalization audit found no new semantic defect within the already declared finite portable fragment.
+
+The boundary is now explicitly recorded in:
+- research/FINAL_SEMANTIC_BOUNDARY.md
+- research/BOUNDARY_CASES.md
+
+The audit identifies the nearest realistic cases outside the established guarantee as dynamic build-time metadata generation and hidden build-environment effects, complete lockfile/hash semantics, arbitrary virtual/provided-package satisfaction relations, and symbolic/infinite environment-domain reasoning. These are evidence boundaries, not demonstrated schema defects.
+
+No schema change was made.
+
+H2e remains NOT TESTED and is unaffected by this technical experiment.
