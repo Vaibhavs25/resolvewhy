@@ -61,7 +61,7 @@ Native fixture concepts used:
 - candidate query coverage;
 - provenance.
 
-resolvelib's public provider contract explicitly separates candidate identification, candidate enumeration through `find_matches`, satisfaction checks, and dependency retrieval; parent-linked requirement information is part of the resolver's public structured model. citeturn838560search0
+resolvelib's public provider contract explicitly separates candidate identification, candidate enumeration through `find_matches`, satisfaction checks, and dependency retrieval; parent-linked requirement information is part of the resolver's public structured model. 
 
 ### uv-shaped adapter
 
@@ -74,7 +74,7 @@ Native fixture concepts used:
 - available-version scope;
 - derivation references.
 
-uv's resolver documentation describes PubGrub-style incompatibility derivation and explicit forking over Python/marker domains. citeturn838560search4
+uv's resolver documentation describes PubGrub-style incompatibility derivation and explicit forking over Python/marker domains. 
 
 The adapters were judged on semantic role, not native object equality.
 
