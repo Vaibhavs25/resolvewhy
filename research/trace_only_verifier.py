@@ -140,9 +140,12 @@ def minimality(t):
     checks=[]
     for cid in core_ids:
         x=clone(t)
-        x['claimed_core']=[z for z in core_ids if z != cid]
         x['semantic_constraints']=[z for z in x['semantic_constraints'] if z.get('id') != cid]
+        # The proof claim is the proposition, so delete the core element from
+        # its premises and independently recompute the resulting problem.
         x['proof_claim']['premise_refs']=[z for z in x['proof_claim']['premise_refs'] if z != cid]
+        if not x['proof_claim']['premise_refs']:
+            x['proof_claim']['premise_refs']=[z.get('id') for z in x['semantic_constraints']]
         checks.append((cid, verify(x)[0]))
     return True, checks
 
