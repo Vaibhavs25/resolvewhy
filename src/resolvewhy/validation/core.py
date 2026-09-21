@@ -93,6 +93,8 @@ def validate_trace(trace: Trace) -> tuple[ValidationIssue, ...]:
     policy_ids = by_id[ReferenceKind.POLICY]
 
     # Evaluation-domain integrity and explicit proof binding.
+    for ref in trace.evaluation_domain.evidence_refs:
+        require_ref(ref)
     for env_ref in trace.evaluation_domain.environment_refs:
         env_trace_ref = TraceRef(ReferenceKind.RUNTIME_CONTEXT, str(env_ref))
         if str(env_ref) not in runtime_ids:
