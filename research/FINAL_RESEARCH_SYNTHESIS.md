@@ -220,6 +220,13 @@ H2e is separate from the mathematical foundation: the absence of feedback does n
 
 Accordingly, production implementation is a separate future decision and is not justified by the present research evidence alone.
 
+## 14a. Reproducibility/implementation alignment
+
+The final clean repository now separates executable and historical evidence. The committed runner `research/run_reproducibility.py` regenerates a finite SAT/UNSAT proof fixture, a SAT negative control, serialization and hermetic replay checks, declared-core deletion checks, exactly 250 distinct deterministic mutation instances, and the currently committed 64-world projection harness.
+
+The previously reported 18/18 serialized corpus and 256-world extended-search results remain historical research records because their complete fixture sets/generators are not present in the final executable entry point. They are not silently re-labeled as freshly reproduced.
+
+The committed verifier is intentionally narrower than the semantic specification: it directly evaluates only the finite version-constraint/Requires-Python fixture fragment, explicit active/inactive edges, complete finite candidate coverage, fixed supported policy values, proof quantifier/domain binding, provenance reachability, and the conservative branch outcome. It does not implement arbitrary PEP 508, generic branch selection, complete artifact/build semantics, lockfiles, or full resolver policy semantics.
 ## 15. Repository publication/readiness audit
 
 The research history should remain intact. The repository now has a dedicated final semantic boundary and conformance record, but historical status documents still contain earlier intermediate conclusions. Those historical sections should be preserved rather than rewritten, because they document the falsification path.
