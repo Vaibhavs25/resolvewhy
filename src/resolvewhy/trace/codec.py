@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import deque
-from typing import Any, Callable, Iterable
+from typing import Any, Iterable
 
 from resolvewhy.model import (
     Artifact,
@@ -95,12 +95,6 @@ def _optional_bool(value: Any, path: str) -> bool | None:
     return value
 
 
-def _required(value: dict[str, Any], key: str, path: str) -> Any:
-    if key not in value:
-        raise TraceDecodeError(f"{path} is missing required field {key!r}")
-    return value[key]
-
-
 def _check_keys(
     value: dict[str, Any],
     *,
@@ -121,17 +115,6 @@ def _check_keys(
 def _string_array(value: Any, path: str) -> tuple[str, ...]:
     values = _require_list(value, path)
     return tuple(_require_str(item, f"{path}[{index}]") for index, item in enumerate(values))
-
-
-def _enum_array(value: Any, enum_type: type, path: str) -> tuple:
-    values = _require_list(value, path)
-    result = []
-    for index, item in enumerate(values):
-        try:
-            result.append(enum_type(item))
-        except (TypeError, ValueError) as exc:
-            raise TraceDecodeError(f"{path}[{index}] has invalid {enum_type.__name__}") from exc
-    return tuple(result)
 
 
 def _serialize_ref(ref: TraceRef) -> dict[str, Any]:
