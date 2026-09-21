@@ -184,7 +184,7 @@ Results:
 
 Two nontrivial subset-minimal UNSAT proofs were independently rechecked from serialized traces: RW-14 (five-element transitive core) and RW-09 (three-element universal Python-domain core).
 
-A deterministic 250-case structural mutation campaign accepted 0 malformed/corrupted artifacts as verified proofs. An extended 256-world projection search produced 0 post-repair semantic collisions and 0 cases where identical portable data plus different hidden native state changed the correct proof result in the tested fragment.
+The deterministic 250-case structural mutation campaign accepted 0 malformed/corrupted artifacts as verified proofs. An extended 256-world projection search produced 0 post-repair semantic collisions and 0 cases where identical portable data plus different hidden native state changed the correct proof result in the tested fragment.
 
 The proof-claim repair therefore resolves the previously observed quantifier/domain binding gap. No additional schema field was required.
 
@@ -222,3 +222,14 @@ All sections above this marker are dated historical research stages. They are re
 **CURRENT:** H2d = PARTIALLY SUPPORTED; H2e = NOT TESTED; technical validation = complete for the declared finite semantic fragment; production implementation = separate future decision.
 
 See `research/FINAL_RESEARCH_SYNTHESIS.md` and `research/REPRODUCIBILITY_INDEX.md` for the consolidated current interpretation.
+
+## Final current-status summary — 2026-09-21
+
+The repository's current reproducibility state is:
+
+- H2d = PARTIALLY SUPPORTED
+- H2e = NOT TESTED
+- technical validation = complete for the declared finite semantic fragment
+- the committed runner regenerates 250 mutation cases and the 256-world projection search
+- the 18-case serialized replay remains a historical research record rather than a fresh live rerun of all historical incidents
+- production implementation remains a separate future decision
