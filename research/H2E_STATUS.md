@@ -207,3 +207,11 @@ The audit identifies the nearest realistic cases outside the established guarant
 No schema change was made.
 
 H2e remains NOT TESTED and is unaffected by this technical experiment.
+
+## Current-status reconciliation note — 2026-09-21
+
+The opening sections of this file preserve dated intermediate research states. They are historical and superseded by the later dated updates in this same file and by `research/FINAL_RESEARCH_SYNTHESIS.md`.
+
+**Current status:** H2d = PARTIALLY SUPPORTED; H2e = NOT TESTED; technical validation = complete for the declared finite semantic fragment; production implementation = separate future decision.
+
+The clean reproducibility runner is intentionally narrower than the historical research record. It regenerates the 250-case mutation campaign and the current 64-world projection harness, but it does not regenerate the historical 18-case serialized corpus or the historical 256-world extended search.
