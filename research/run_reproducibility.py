@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Deterministic research reproducibility suite.
 
-No network, package index, native resolver, or undeclared external state is
-required. The suite checks the committed finite fixture verifier and the
-committed projection-search implementation. Historical source-analysis and
-public-issue claims are not freshly re-executed here.
+The suite regenerates the executable finite verifier checks and the current
+projection search. The historical 18-case and 256-world figures remain
+research-record figures unless corresponding fixtures/harnesses are committed.
 """
 from __future__ import annotations
 
 import copy
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -19,71 +19,80 @@ ROOT = Path(__file__).resolve().parent
 VERIFIER = ROOT / "trace_only_verifier.py"
 COLLISION = ROOT / "portable_core_collision_search.py"
 
-EXPECTED_CORPUS = {
-    "RW-01": "VERIFIED_UNSAT",
-    "RW-02": "VERIFIED_SAT",
-    "RW-03": "INSUFFICIENT_EVIDENCE",
-    "RW-04": "INSUFFICIENT_EVIDENCE",
-    "RW-05": "INSUFFICIENT_EVIDENCE",
-    "RW-06": "INSUFFICIENT_EVIDENCE",
-    "RW-07": "INSUFFICIENT_EVIDENCE",
-    "RW-08": "INSUFFICIENT_EVIDENCE",
-    "RW-09": "VERIFIED_UNSAT",
-    "RW-10": "INSUFFICIENT_EVIDENCE",
-    "RW-11": "INSUFFICIENT_EVIDENCE",
-    "RW-12": "INSUFFICIENT_EVIDENCE",
-    "RW-13": "INSUFFICIENT_EVIDENCE",
-    "RW-14": "VERIFIED_UNSAT",
-    "RW-15": "VERIFIED_UNSAT",
-    "RW-16": "VERIFIED_UNSAT",
-    "RW-17": "VERIFIED_UNSAT",
-    "RW-18": "VERIFIED_SAT",
-}
 
-
-def load_verifier():
+def load_module(path: Path):
     ns = {}
-    exec(VERIFIER.read_text(encoding="utf-8"), ns)
+    exec(path.read_text(encoding="utf-8"), ns)
     return ns
 
 
-def load_collision():
-    ns = {}
-    exec(COLLISION.read_text(encoding="utf-8"), ns)
-    return ns
-
-
-def check_assert(name: str, cond: bool) -> None:
-    if not cond:
+def require(name: str, condition: bool) -> None:
+    if not condition:
         raise AssertionError(name)
 
 
-def corpus_fixture(name: str, v: dict):
-    # The committed verifier currently has one explicit finite fixture.
-    # The 18-case trace-only corpus is represented in the research record,
-    # not as 18 independently materialized JSON fixtures in this repository.
-    if name == "fixture":
-        return v["base_trace"]()
-    raise KeyError(name)
+def mutation_campaign(v):
+    base = v["base_trace"]()
+    taxonomy = [
+        "ids", "references", "arrays", "evaluation_domain", "quantifiers",
+        "coverage_attestation", "provenance", "candidate_artifact_links",
+        "dependency_references", "proof_premises", "evidence_states",
+    ]
+    results = []
+    for i in range(250):
+        case = copy.deepcopy(base)
+        fam = taxonomy[i % len(taxonomy)]
+        variant = i // len(taxonomy)
+        if fam == "ids":
+            case["candidates"][variant % len(case["candidates"])]["id"] = None
+        elif fam in {"references", "dependency_references"}:
+            case["dependencies"][0]["parent_candidate"] = f"missing-{variant}"
+        elif fam == "arrays":
+            case["candidate_domains"][0]["candidate_ids"] = ["x@1"]
+        elif fam == "evaluation_domain":
+            case["evaluation_domain"][0]["id"] = f"env-corrupt-{variant}"
+        elif fam == "quantifiers":
+            case["proof_claim"]["quantifier"] = ["existential", "universal", "branch", "invalid"][variant % 4]
+        elif fam == "coverage_attestation":
+            if variant % 2 == 0:
+                case["candidate_domains"][0]["coverage"].pop("attestation", None)
+            else:
+                case["candidate_domains"][0]["coverage"]["attestation"]["evidence_refs"] = [f"missing-{variant}"]
+        elif fam == "provenance":
+            if variant % 2 == 0:
+                case["provenance"] = []
+            else:
+                case["provenance"][0]["premise_refs"] = [f"missing-{variant}"]
+        elif fam == "candidate_artifact_links":
+            case["artifacts"][0]["candidate_ref"] = f"missing-candidate-{variant}"
+        elif fam == "proof_premises":
+            case["proof_claim"]["premise_refs"] = [f"missing-premise-{variant}"]
+        elif fam == "evidence_states":
+            case["evidence_state"]["overall"] = ["unknown", "incomplete", "missing"][variant % 3]
+        raw = json.dumps(case, sort_keys=True, separators=(",", ":"))
+        results.append((i, fam, raw, v["verify"](case)[0]))
+    require("250 distinct mutation instances", len({x[2] for x in results}) == 250)
+    false_accepts = sum(r[3] in {"VERIFIED_SAT", "VERIFIED_UNSAT"} for r in results)
+    require("zero mutation false accepts", false_accepts == 0)
+    return len(results), false_accepts
 
 
 def run():
-    v = load_verifier()
-    c = load_collision()
+    v = load_module(VERIFIER)
+    c = load_module(COLLISION)
 
-    # Core executable checks.
-    t = v["base_trace"]()
-    check_assert("base verdict", v["verify"](t)[0] == "VERIFIED_UNSAT")
+    base = v["base_trace"]()
+    require("base UNSAT", v["verify"](base)[0] == "VERIFIED_UNSAT")
 
-    rt = json.loads(json.dumps(t, sort_keys=True))
-    check_assert("round trip", v["verify"](t) == v["verify"](rt))
+    roundtrip = json.loads(json.dumps(base, sort_keys=True))
+    require("serialization roundtrip", v["verify"](base) == v["verify"](roundtrip))
 
-    base, deletions = v["minimality"](t)
-    check_assert("minimality baseline", base)
-    check_assert("minimality deletion 1", any(x[1] == "VERIFIED_SAT" for x in deletions))
-    check_assert("minimality exercised", len(deletions) == 3)
+    minimal, deletion_results = v["minimality"](base)
+    require("subset-minimal baseline", minimal)
+    require("all three deletion checks executed", len(deletion_results) == 3)
+    require("deletions become SAT", all(x[1] == "VERIFIED_SAT" for x in deletion_results))
 
-    expected_mutations = {
+    expected = {
         "coverage_attestation": "INVALID_TRACE",
         "evaluation_domain": "INVALID_TRACE",
         "resolution_policy": "INVALID_TRACE",
@@ -94,103 +103,41 @@ def run():
         "dangling_ref": "INVALID_TRACE",
         "evidence_state": "INSUFFICIENT_EVIDENCE",
     }
-    for name, expected in expected_mutations.items():
-        got = v["verify"](v["mutate"](t, name))[0]
-        check_assert(f"mutation {name}", got == expected)
+    for name, wanted in expected.items():
+        require(f"mutation {name}", v["verify"](v["mutate"](base, name))[0] == wanted)
 
-    # Deterministic 250-case mutation campaign. Each case is a distinct
-    # mutation instance across the taxonomy; duplicates are prohibited.
-    taxonomy = [
-        ("ids", "candidate_identity"),
-        ("references", "dangling_ref"),
-        ("arrays", "candidate_coverage"),
-        ("evaluation_domain", "evaluation_domain"),
-        ("quantifiers", "quantifier"),
-        ("coverage_attestation", "coverage_attestation"),
-        ("provenance", "provenance"),
-        ("candidate_artifact_links", "candidate_artifact_link"),
-        ("dependency_references", "dependency_reference"),
-        ("proof_premises", "proof_premise_reference"),
-        ("evidence_states", "evidence_state"),
-    ]
-    # The finite verifier has a narrow mutation primitive. To keep the campaign
-    # meaningful rather than repeating one mutation, construct deterministic
-    # instances by applying different field-specific corruptions to independent
-    # deep copies. Every generated record has a unique mutation signature.
-    mutations = []
-    for i in range(250):
-        case = copy.deepcopy(t)
-        fam, primitive = taxonomy[i % len(taxonomy)]
-        variant = i // len(taxonomy)
-        if primitive == "candidate_identity":
-            case["candidates"][variant % len(case["candidates"])]["id"] = None
-        elif primitive == "dangling_ref":
-            case["dependencies"][0]["parent_candidate"] = f"missing-{variant}"
-        elif primitive == "candidate_coverage":
-            case["candidate_domains"][0]["coverage"]["status"] = "partial" if variant % 2 == 0 else "unknown"
-        elif primitive == "evaluation_domain":
-            case["evaluation_domain"][0]["id"] = f"env-corrupt-{variant}"
-        elif primitive == "quantifier":
-            case["proof_claim"]["quantifier"] = ["existential", "universal", "branch", "MISSING"][variant % 4]
-        elif primitive == "coverage_attestation":
-            if variant % 2 == 0:
-                case["candidate_domains"][0]["coverage"].pop("attestation", None)
-            else:
-                case["candidate_domains"][0]["coverage"]["attestation"]["evidence_refs"] = [f"missing-{variant}"]
-        elif primitive == "provenance":
-            if variant % 2 == 0:
-                case["provenance"] = []
-            else:
-                case["provenance"][0]["premise_refs"] = [f"missing-{variant}"]
-        elif primitive == "candidate_artifact_link":
-            case["artifacts"][0]["candidate_ref"] = f"missing-candidate-{variant}"
-        elif primitive == "dependency_reference":
-            case["dependencies"][0]["parent_candidate"] = f"missing-dependency-{variant}"
-        elif primitive == "proof_premise_reference":
-            case["proof_claim"]["premise_refs"] = [f"missing-premise-{variant}"]
-        elif primitive == "evidence_state":
-            states = ["unknown", "incomplete", "missing"]
-            case["evidence_state"]["overall"] = states[variant % len(states)]
-        signature = json.dumps(case, sort_keys=True, separators=(",", ":"))
-        mutations.append((i, fam, primitive, signature, v["verify"](case)[0]))
-    check_assert("250 unique mutations", len({m[3] for m in mutations}) == 250)
-    false_accepts = sum(1 for m in mutations if m[4] in {"VERIFIED_SAT", "VERIFIED_UNSAT"})
-    check_assert("mutation false accepts", false_accepts == 0)
+    mutation_cases, mutation_false_accepts = mutation_campaign(v)
 
-    # Branch-selector semantics are not implemented in the committed verifier;
-    # assert the documented conservative outcome rather than overclaim it.
-    branch_case = copy.deepcopy(t)
-    branch_case["trace_scope"] = "branch"
-    branch_case["proof_claim"]["quantifier"] = "branch"
-    check_assert("branch is conservative", v["verify"](branch_case)[0] == "INSUFFICIENT_EVIDENCE")
+    branch = copy.deepcopy(base)
+    branch["trace_scope"] = "branch"
+    branch["proof_claim"]["quantifier"] = "branch"
+    require("branch conservative", v["verify"](branch)[0] == "INSUFFICIENT_EVIDENCE")
 
-    # Projection search.
-    worlds, raw, repaired, unique = c["collision_search"]()
-    check_assert("projection worlds", worlds == 64)
-    check_assert("post-repair collisions", repaired == 0)
-    check_assert("native deletion", c["native_deletion_check"]() is True)
+    worlds, raw_collisions, repaired_collisions, _ = c["collision_search"]()
+    require("projection harness has 64 worlds", worlds == 64)
+    require("post-repair collisions zero", repaired_collisions == 0)
+    require("native deletion preserves truth", c["native_deletion_check"]() is True)
 
-    # Hermetic child-process replay: run the verifier with isolated mode and
-    # no proxy/PYTHONPATH variables.
     with tempfile.TemporaryDirectory(prefix="resolvewhy-repro-") as td:
-        isolated = Path(td) / "verifier.py"
+        td = Path(td)
+        isolated = td / "verifier.py"
         isolated.write_text(VERIFIER.read_text(encoding="utf-8"), encoding="utf-8")
-        env = {k: val for k, val in dict(__import__("os").environ).items()
+        env = {k: val for k, val in os.environ.items()
                if k not in {"PYTHONPATH", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"}}
         p = subprocess.run([sys.executable, "-I", str(isolated)],
                            cwd=td, env=env, capture_output=True, text=True)
-        check_assert("hermetic rc", p.returncode == 0)
+        require("hermetic child process", p.returncode == 0)
 
     print("REPRODUCIBILITY SUITE")
     print("EXECUTABLE_VERIFIER_SCOPE = finite fixture fragment")
-    print("TRACE_ONLY_CORPUS = historical_claim_only (18/18 is not regenerated by this runner)")
+    print("TRACE_ONLY_CORPUS = historical 18-case record (not regenerated here)")
     print("SERIALIZATION_ROUNDTRIP = 1/1")
     print("HERMETIC_REPLAY = 1/1")
-    print("SUBSET_MINIMAL_PROOFS = 1 executable fixture (historical corpus record: 2)")
-    print(f"MUTATION_CASES = {len(mutations)}")
-    print(f"MUTATION_FALSE_ACCEPTS = {false_accepts}")
+    print("SUBSET_MINIMAL_PROOFS = 1 executable fixture")
+    print(f"MUTATION_CASES = {mutation_cases}")
+    print(f"MUTATION_FALSE_ACCEPTS = {mutation_false_accepts}")
     print(f"PROJECTION_WORLDS = {worlds}")
-    print(f"POST_REPAIR_COLLISIONS = {repaired}")
+    print(f"POST_REPAIR_COLLISIONS = {repaired_collisions}")
 
 
 if __name__ == "__main__":
