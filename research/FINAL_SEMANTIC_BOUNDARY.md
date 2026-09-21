@@ -188,3 +188,10 @@ These are evidence boundaries, not claims that such semantics are impossible to 
 **A. BOUNDARY SURVIVES — NO NEW SEMANTIC DEFECT.**
 
 The current schema is unchanged. The technical-validation phase is sufficiently bounded for final synthesis and reproducibility packaging. H2e remains a separate empirical gate.
+
+
+## Stable references
+
+- https://packaging.python.org/en/latest/specifications/dependency-specifiers/
+- https://peps.python.org/pep-517/
+- https://packaging.python.org/en/latest/specifications/pylock-toml/
