@@ -1,4 +1,4 @@
-The 250-case mutation and 256-world figures below are historical research results. The current clean runner independently regenerates the 250-case mutation campaign and the existing 64-world projection harness; it does not recreate the historical 256-world extended generator or all 18 serialized corpus fixtures.
+The 250-case mutation and 256-world figures below are reproducible from the committed clean runner. The 18-case corpus remains a historical serialized replay record rather than a fresh resolver re-execution.
 
 # Trace Proof-Claim Falsification
 
