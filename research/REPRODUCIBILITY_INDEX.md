@@ -87,3 +87,18 @@ POST_REPAIR_COLLISIONS = 0
 ```
 
 These are executable expectations of the committed clean runner; the 18-case and 256-world figures remain historical research records.
+## Current executable semantic obligations
+
+The clean runner verifies the following executable cases in the committed finite fixture verifier:
+
+1. SAT and UNSAT reconstruction over normalized version constraints.
+2. Dependency-edge activation via the explicit boolean `active` flag.
+3. The recorded `Requires-Python >=3.10` compatibility case.
+4. Complete finite candidate-domain coverage with attestation.
+5. Explicit proof quantifier/domain binding.
+6. Proof premises selecting the semantic constraints actually reconstructed.
+7. Provenance reachability from proof premises to in-scope evidence.
+8. Candidate/artifact reference integrity; artifact feasibility itself is not evaluated.
+9. Fixed executable policy values; general prerelease/source-policy semantics are not evaluated.
+10. Conservative branch behavior: generic branch selectors return `INSUFFICIENT_EVIDENCE`.
+11. Resolver-label disagreement: the declared SAT/UNSAT label is ignored in favor of recomputation.
