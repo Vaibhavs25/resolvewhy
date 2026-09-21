@@ -311,7 +311,11 @@ class DefaultPipSemantics:
             kind = CandidateKind.VCS
         elif getattr(source_link, "is_file", False):
             kind = CandidateKind.PATH
-        elif "directurl" in class_name or "direct_url" in class_name:
+        elif (
+            "directurl" in class_name
+            or "direct_url" in class_name
+            or (source_link is not None and source_ref is None and link_url is not None)
+        ):
             kind = CandidateKind.DIRECT_URL
         else:
             kind = CandidateKind.REGISTRY
