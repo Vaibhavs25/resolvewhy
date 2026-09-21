@@ -158,7 +158,7 @@ def run():
     print("TRACE_ONLY_CORPUS = historical 18-case record (not regenerated here)")
     print("SERIALIZATION_ROUNDTRIP = 1/1")
     print("HERMETIC_REPLAY = 1/1")
-    print("SUBSET_MINIMAL_PROOFS = 1 executable fixture")
+    print("SUBSET_MINIMAL_PROOFS = 1 executable fixture (historical full-corpus record: 2)")
     print(f"MUTATION_CASES = {mutation_cases}")
     print(f"MUTATION_FALSE_ACCEPTS = {mutation_false_accepts}")
     print(f"PROJECTION_WORLDS = {worlds}")
