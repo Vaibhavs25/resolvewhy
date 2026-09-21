@@ -46,7 +46,8 @@ def structural(t):
         if cov.get('status')=='complete' and not isinstance(cov.get('attestation'),dict): return False,'complete coverage lacks attestation'
         if any(x not in ids for x in q.get('candidate_ids',[])): return False,'dangling coverage candidate'
     if not t['provenance']: return False,'missing provenance'
-    if any(p.get('id') is None for p in t['provenance'] if isinstance(p,dict)): return False,'invalid provenance IDs'
+    prov_ids=[p.get('id') for p in t['provenance'] if isinstance(p,dict)]
+    if len(prov_ids)!=len(t['provenance']) or any(x is None for x in prov_ids) or len(prov_ids)!=len(set(prov_ids)): return False,'invalid provenance IDs'
     evidence_refs=set()
     for q in t['candidate_domains']:
         a=q.get('coverage',{}).get('attestation',{})
