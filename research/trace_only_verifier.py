@@ -11,6 +11,8 @@ def structural(t):
     if missing: return False,'missing required fields: '+','.join(missing)
     if t['trace_scope'] not in {'existential','universal','branch'}: return False,'invalid trace scope'
     if not isinstance(t['evaluation_domain'],list) or not t['evaluation_domain']: return False,'invalid evaluation domain'
+    domain_ids=[e.get('id') for e in t['evaluation_domain'] if isinstance(e,dict)]
+    if len(domain_ids)!=len(t['evaluation_domain']) or len(domain_ids)!=len(set(domain_ids)): return False,'invalid evaluation domain IDs'
     claim=t['proof_claim']
     if not isinstance(claim,dict): return False,'invalid proof claim'
     if claim.get('kind')!='satisfiability': return False,'invalid proof claim kind'
@@ -37,29 +39,21 @@ def structural(t):
         if cov.get('status')=='complete' and not isinstance(cov.get('attestation'),dict): return False,'complete coverage lacks attestation'
         if any(x not in ids for x in q.get('candidate_ids',[])): return False,'dangling coverage candidate'
     if not t['provenance']: return False,'missing provenance'
-    prov={p.get('id'):p for p in t['provenance'] if isinstance(p,dict)}
+    evidence_ids={p.get('id') for p in t['provenance'] if isinstance(p,dict)}
     evidence_refs=set()
-    if isinstance(t.get('candidate_domains'),list):
-        for q in t['candidate_domains']:
-            a=q.get('coverage',{}).get('attestation',{})
-            evidence_refs.update(a.get('evidence_refs',[]) if isinstance(a,dict) else [])
+    for q in t['candidate_domains']:
+        a=q.get('coverage',{}).get('attestation',{})
+        if isinstance(a,dict): evidence_refs.update(a.get('evidence_refs',[]))
     semantic_ids={c.get('id') for c in t['semantic_constraints']}
+    req_ids={r.get('id') for r in t['requirements']}
+    dep_ids={d.get('id') for d in t['dependencies']}
     claimed=set(claim.get('premise_refs',[]))
+    if not claimed.issubset(semantic_ids): return False,'proof premise is not a declared semantic constraint'
     for sid in claimed:
-        if sid not in semantic_ids: return False,'proof premise is not a declared semantic constraint'
-        matches=[p for p in t['provenance'] if sid in p.get('premise_refs',[])]
+        matches=[p for p in t['provenance'] if isinstance(p,dict) and sid in p.get('premise_refs',[])]
         if not matches: return False,'proof premise lacks provenance'
-        linked=False
-        for p in matches:
-            for ref in p.get('premise_refs',[]):
-                if ref in evidence_refs or ref in {d.get('id') for d in t['dependencies']} or ref in {r.get('id') for r in t['requirements']}:
-                    linked=True
-        if not linked: return False,'proof premise provenance lacks in-scope evidence'
-    # Every claimed premise must participate in the checked semantic problem.
-    used_sources={sc.get('source_ref') for sc in t['semantic_constraints'] if isinstance(sc,dict)}
-    for sid in claimed:
-        sc=next(sc for sc in t['semantic_constraints'] if sc.get('id')==sid)
-        if sc.get('source_ref') not in used_sources: return False,'proof premise is not semantically connected'
+        if not any(any(ref in evidence_refs or ref in dep_ids or ref in req_ids for ref in p.get('premise_refs',[])) for p in matches):
+            return False,'proof premise provenance lacks in-scope evidence'
     return True,'ok'
 
 def candidate_usable(c,t,env):
