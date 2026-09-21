@@ -30,6 +30,7 @@
 | Requires-Python | SUPPORTED | SUPPORTED | SUPPORTED | SUPPORTED | SUPPORTED |
 | Platform/artifact compatibility | SUPPORTED | SUPPORTED | SUPPORTED | PARTIAL | SUPPORTED semantically |
 | Candidate-domain coverage | PARTIAL | PARTIAL | PARTIAL | PARTIAL | SUPPORTED only with explicit attestation |
+| Evaluation domain / proof quantifier | PARTIAL | SUPPORTED | PARTIAL | PARTIAL | REQUIRED FOR MULTI-ENVIRONMENT PROOF SCOPE |
 | Empty candidate observation | SUPPORTED as observation | SUPPORTED as observation | SUPPORTED as observation | SUPPORTED as observation | Never equals global absence |
 | Rejection reason | PARTIAL | PARTIAL | PARTIAL | PARTIAL | NAMESPACED + typed |
 | Native incompatibility object | NAMESPACED | NAMESPACED | NAMESPACED | NAMESPACED | NAMESPACED |
@@ -39,7 +40,7 @@
 | Backtracking state | PARTIAL | SUPPORTED | SUPPORTED | SUPPORTED | NAMESPACED / optional |
 | Decision levels | PARTIAL | SUPPORTED | SUPPORTED | SUPPORTED | NAMESPACED / optional |
 | Index authentication/query failure | PARTIAL | SUPPORTED | UNKNOWN | UNKNOWN | SUPPORTED as evidence state, details namespaced |
-| Universal/forked resolution domain | PARTIAL | SUPPORTED | SUPPORTED | PARTIAL | SUPPORTED as explicit domain/activation |
+| Universal/forked resolution domain | PARTIAL | SUPPORTED | SUPPORTED | PARTIAL | PARTIAL until explicit evaluation domain is present |
 | Yank state | PARTIAL | SUPPORTED | PARTIAL | PARTIAL | SUPPORTED as artifact/source fact |
 | Cutoff/exclusion policy | PARTIAL | SUPPORTED | PARTIAL | PARTIAL | SUPPORTED as policy |
 | Human-readable error text | SUPPORTED as observed text | SUPPORTED as observed text | SUPPORTED as observed text | SUPPORTED as observed text | Not proof-bearing |
@@ -76,8 +77,10 @@ The following must remain namespaced or optional:
 
 No tested field was forced into **NOT REPRESENTABLE**.
 
+The portable-core sufficiency experiment did find one projection collision: a singleton active-environment claim and a universal claim over a larger environment domain could share the same pre-repair projection. The missing distinction is now represented by explicit `evaluation_domain` proof scope.
+
 Several native fields do have non-identical meanings across resolver families. The safe answer is not to flatten those fields; it is to retain them under resolver namespaces and normalize only their semantic consequences.
 
-Therefore the matrix supports **partial H2d portability**, not universal interchange.
+The matrix therefore supports **partial H2d portability** with an explicit evaluation-domain boundary for multi-environment claims. It does not support universal interchange.
 
 **H2e remains separate and unchanged: NOT TESTED.**
