@@ -121,6 +121,14 @@ def run():
     disagreement["proof_claim"]["status_claim"] = "SAT"
     require("resolver-label disagreement", v["verify"](disagreement)[0] == "VERIFIED_UNSAT")
 
+    omitted = copy.deepcopy(base)
+    omitted["proof_claim"]["premise_refs"] = ["c:root"]
+    require("omitted semantic premise changes proposition", v["verify"](omitted)[0] == "VERIFIED_SAT")
+
+    unrelated = copy.deepcopy(base)
+    unrelated["proof_claim"]["premise_refs"] = ["c:not-real"]
+    require("unrelated premise rejected", v["verify"](unrelated)[0] == "INVALID_TRACE")
+
     expected = {
         "coverage_attestation": "INVALID_TRACE",
         "evaluation_domain": "INVALID_TRACE",
