@@ -543,7 +543,7 @@ def normalize_capture(
             and item[1] not in consumed_req_events
         ]
         if candidates:
-            event_ref, req_ref, view = candidates[0]
+            event, req_ref, view, identifier = candidates[0]
             consumed_req_events.add(req_ref)
             return req_ref, view, False
 
