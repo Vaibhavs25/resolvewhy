@@ -83,3 +83,10 @@ The current pylock specification includes environment selectors, extras, depende
 A semantic feature enters the proven boundary only when its satisfiability meaning can be reconstructed from serialized evidence and the relevant completeness/provenance obligations are independently established.
 
 A feature does not enter merely because a resolver supports it, its syntax can be serialized, or a native diagnostic mentions it.
+
+
+## Stable references
+
+- https://packaging.python.org/en/latest/specifications/dependency-specifiers/
+- https://packaging.python.org/en/latest/specifications/pylock-toml/
+- https://peps.python.org/pep-517/
