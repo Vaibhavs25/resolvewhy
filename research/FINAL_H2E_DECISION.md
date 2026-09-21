@@ -323,4 +323,4 @@ The preceding dated sections are historical intermediate decisions and are prese
 - Technical validation: complete for the declared finite semantic fragment
 - Production implementation: separate future decision
 
-The clean reproducibility runner regenerates the 250-case mutation campaign and the current 64-world projection harness. The historical 18-case and 256-world results remain identified as historical research records.
+The clean reproducibility runner regenerates the 250-case mutation campaign and the 256-world extended projection search. The historical 18-case result remains a serialized research-record replay rather than a fresh execution of every historical resolver incident.
