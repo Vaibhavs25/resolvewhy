@@ -577,3 +577,35 @@ Final architecture decision: REVISE resolvewhy-trace/v0.
 H2e remains NOT TESTED.
 
 No production architecture should begin solely from this audit; the next research gate is still substantive external maintainer feedback or another falsification experiment targeting the revised coverage/provenance contract.
+
+
+## Revised-contract adversarial experiment — 2026-09-21
+
+The next experiment tested the revised contract against actual local pip 25.1.1 and uv 0.10.0 executions plus source-level Poetry/pipgrip evidence.
+
+Current upstream source snapshots used for architecture comparison:
+- resolvelib 1.2.2.dev0 — a0cb7c50b78028f840b238d8e1c391e0546f2325
+- pip 26.3.dev0 source tree — 892d13b34a20b3244a05d90622bbb5bf8e7ccf46
+- Poetry 2.5.1 — 94b6e35b9091991887aa54feeb3771a86d3bd692
+- pipgrip current repository HEAD — 195dfe41f9efa7abe161d6d69368e35939867b33
+- uv 0.10.0 source tree — a1b84bcbda122236faae8fa5fdcbe16cfb76cde2
+
+Executable results:
+- multiple-index scope behaved differently when only index A versus A+B were configured;
+- platform-only artifacts were distinguishable from package/version existence in uv's error structure;
+- Requires-Python and prerelease policy changed candidate usability without changing the underlying candidate identity;
+- pip --report preserved direct URL and local VCS commit provenance on successful dry runs, but a contradictory failed resolution produced no report file;
+- invalid/missing wheel metadata produced resolver-visible package-format failures;
+- same name/version candidates from different indexes selected different artifact URLs, demonstrating source identity is semantically relevant;
+- the contract-level proof gate passed 8/8 adversarial checks.
+
+The experiment found one additional semantic tightening: a generic resolver_exhaustion basis is not sufficient by itself. A resolver may exhaust the candidate set supplied by a provider while the provider itself has only observed a subset of a larger external source universe.
+
+Therefore completeness must be attested over an explicitly declared candidate domain, with source/index scope and supporting evidence. This refinement is reflected in research/REVISED_TRACE_SCHEMA.md.
+
+Final result:
+**REVISE v0 survived the targeted adversarial experiment.**
+
+This does not establish H2d or H2e:
+- stable cross-ecosystem interchange remains unproven;
+- maintainer validation remains untested with 0 substantive responses.
