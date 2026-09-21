@@ -142,3 +142,19 @@ Technical interpretation:
 - this experiment does not establish universal completeness.
 
 **H2e remains NOT TESTED.** No maintainer feedback was involved and the 0 substantive-response status is unchanged.
+
+
+## Trace-only verification — 2026-09-21
+
+A hermetic trace-only verification experiment was started against the repaired portable core. The verifier consumes only a serialized semantic trace and verifier code; native resolver objects, resolver source, package indexes, network access, and human-readable diagnostics are not used by the proof computation.
+
+The experiment established the proof-artifact validity boundary for the tested fragment:
+- missing required structural fields -> INVALID_TRACE;
+- complete candidate coverage without an attestation -> INVALID_TRACE;
+- incomplete/unknown evidence -> INSUFFICIENT_EVIDENCE;
+- dangling candidate/dependency/coverage references -> INVALID_TRACE;
+- a serialized transitive contradiction can be reconstructed and classified without native resolver state.
+
+The current committed harness is research/trace_only_verifier.py. The trace-only result is technical evidence only and does not affect H2e.
+
+**H2e remains NOT TESTED — 0 substantive maintainer responses.**
