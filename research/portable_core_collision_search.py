@@ -7,7 +7,14 @@ ACTIVE = "python3.13/linux/x86_64/cpython"
 LEGACY = "python3.9/linux/x86_64/cpython"
 WINDOWS = "python3.13/windows/amd64/cpython"
 ARM = "python3.13/linux/aarch64/cpython"
-DOMAINS = [(ACTIVE,), (ACTIVE, LEGACY), (ACTIVE, WINDOWS), (ACTIVE, ARM)]
+
+DOMAINS = [
+    (ACTIVE,),
+    (ACTIVE, LEGACY),
+    (ACTIVE, WINDOWS),
+    (ACTIVE, ARM),
+]
+QUANTIFIERS = ("universal", "existential", "branch", "universal")
 
 @dataclass(frozen=True)
 class Candidate:
@@ -39,18 +46,29 @@ def artifact_compatible(candidate: Candidate, env: str) -> bool:
         return env.startswith("python3.13/windows/")
     return True
 
-def truth(world: dict[str, Any]) -> str:
+def branch_truth(world: dict[str, Any], env: str) -> bool:
+    if not world["activation_active"]:
+        return True
     candidate = world["candidate"]
-    for env in world["evaluation_domain"]:
-        if not python_compatible(candidate, env):
-            return "UNSAT"
-        if not artifact_compatible(candidate, env):
-            return "UNSAT"
+    return python_compatible(candidate, env) and artifact_compatible(candidate, env)
+
+def truth(world: dict[str, Any]) -> str:
     if not world["activation_active"]:
         return "SAT"
     if world["candidate_coverage"]["status"] != "complete":
         return "INSUFFICIENT_EVIDENCE"
-    return "SAT"
+
+    results = [branch_truth(world, env) for env in world["evaluation_domain"]]
+    quantifier = world["proof_quantifier"]
+
+    if quantifier == "universal":
+        return "VERIFIED_UNSAT" if not all(results) else "SAT"
+    if quantifier == "existential":
+        return "SAT" if any(results) else "VERIFIED_UNSAT"
+    if quantifier == "branch":
+        result = results[world["branch_index"]]
+        return "SAT" if result else "VERIFIED_UNSAT"
+    raise ValueError(quantifier)
 
 def pip_adapter(native: dict[str, Any]) -> dict[str, Any]:
     return {
@@ -85,7 +103,9 @@ def make_world(family: str, domain: tuple[str, ...], variant: int) -> dict[str, 
     policy = POLICIES[variant % len(POLICIES)]
     source = "index:A" if (variant % 4) < 2 else "index:B"
     candidate = Candidate(
-        "numba", "0.61", ">=3.10",
+        "numba",
+        "0.61",
+        ">=3.10",
         source=source,
         artifact="windows-only" if (variant % 8) == 6 else None,
     )
@@ -95,36 +115,52 @@ def make_world(family: str, domain: tuple[str, ...], variant: int) -> dict[str, 
         "attested": (variant % 3) != 2,
     }
     activation = activation_active(variant, domain[0])
+    quantifier = QUANTIFIERS[variant % len(QUANTIFIERS)]
+    branch_index = variant % len(domain)
+    provenance_tag = f"metadata:numba-0.61:{variant % 3}"
+
     native = {
         "variant": variant,
         "decision_level": 4 + (variant % 7),
         "backjump_state": variant % 3,
         "native_note": f"resolver-{family}-{variant}",
     }
+
     if family == "pip":
         return {
             "root_requirements": (("app", "==1"),),
             "requirement_information": (("app==1", "numba>=0.61", activation),),
             "provider_candidate": candidate,
-            "runtime": {"python": domain[0].split("/")[0].replace("python", ""), "platform": domain[0].split("/")[1]},
+            "runtime": {
+                "python": domain[0].split("/")[0].replace("python", ""),
+                "platform": domain[0].split("/")[1],
+            },
             "policy": policy,
             "candidate_coverage": coverage,
-            "provenance": (("metadata:numba-0.61", source),),
+            "provenance": ((provenance_tag, source),),
             "evidence_state": "known_fact" if coverage["status"] == "complete" else "partial",
             "evaluation_domain": domain,
+            "proof_quantifier": quantifier,
+            "branch_index": branch_index,
             "activation_active": activation,
             "native": native,
         }
+
     return {
         "root_terms": (("app", "==1"),),
         "fork_terms": (("app==1", "numba>=0.61", activation),),
         "included_version": candidate,
-        "environment": {"python": domain[0].split("/")[0].replace("python", ""), "platform": domain[0].split("/")[1]},
+        "environment": {
+            "python": domain[0].split("/")[0].replace("python", ""),
+            "platform": domain[0].split("/")[1],
+        },
         "resolver_policy": policy,
         "available_version_scope": coverage,
-        "derivation_refs": (("uv:derive:42", "metadata:numba-0.61"),),
+        "derivation_refs": ((f"uv:derive:{variant % 5}", provenance_tag),),
         "evidence_state": "known_fact" if coverage["status"] == "complete" else "partial",
         "evaluation_domain": domain,
+        "proof_quantifier": quantifier,
+        "branch_index": branch_index,
         "activation_active": activation,
         "native": native,
     }
@@ -136,7 +172,8 @@ def current_projection(world: dict[str, Any]) -> tuple[Any, ...]:
 def repaired_projection(world: dict[str, Any]) -> tuple[Any, ...]:
     return current_projection(world) + (
         ("evaluation_domain", tuple(world["evaluation_domain"])),
-        ("proof_quantifier", "universal"),
+        ("proof_quantifier", world["proof_quantifier"]),
+        ("branch_index", world["branch_index"]),
         ("activation_active", world["activation_active"]),
     )
 
@@ -146,29 +183,35 @@ def collision_search() -> tuple[int, int, int, int]:
         for family in ("pip", "uv"):
             for variant in range(32):
                 worlds.append(make_world(family, domain, variant))
+
     groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
     for world in worlds:
         groups.setdefault(current_projection(world), []).append(world)
-    raw = sum(1 for items in groups.values() if len({truth(w) for w in items}) > 1)
+    raw = sum(
+        1 for items in groups.values() if len({truth(w) for w in items}) > 1
+    )
+
     repaired_groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
     for world in worlds:
         repaired_groups.setdefault(repaired_projection(world), []).append(world)
-    repaired = sum(1 for items in repaired_groups.values() if len({truth(w) for w in items}) > 1)
-    unique_patterns = 0
-    for items in groups.values():
-        if len({truth(w) for w in items}) > 1:
-            unique_patterns += 1
+    repaired = sum(
+        1 for items in repaired_groups.values() if len({truth(w) for w in items}) > 1
+    )
+
+    unique_patterns = sum(
+        1 for items in groups.values() if len({truth(w) for w in items}) > 1
+    )
     return len(worlds), raw, repaired, unique_patterns
 
 def native_deletion_check() -> bool:
-    baseline_world = make_world("uv", (ACTIVE, LEGACY), 0)
-    baseline = truth(baseline_world)
     for variant in range(8):
+        world = make_world("uv", (ACTIVE, LEGACY), variant)
+        baseline = truth(world)
         clone = make_world("uv", (ACTIVE, LEGACY), variant)
-        clone["native"] = {"variant": None, "decision_level": None}
-        if truth(clone) != truth(make_world("uv", (ACTIVE, LEGACY), variant)):
+        clone["native"] = {"variant": None, "decision_level": None, "backjump_state": None}
+        if truth(clone) != baseline:
             return False
-    return baseline in {"SAT", "UNSAT", "INSUFFICIENT_EVIDENCE"}
+    return True
 
 if __name__ == "__main__":
     worlds, raw, repaired, unique = collision_search()
