@@ -9,6 +9,14 @@ Research prototype for formally verified explanations of dependency-resolution f
 **H2e:** NOT TESTED — no substantive maintainer feedback was obtained.
 **Production implementation:** not established or approved by this research.
 
+## Production implementation status
+
+**Phase 1 — Production Semantic Core:** implemented as the initial reusable foundation under `src/resolvewhy`.
+
+The current production package contains typed semantic domain objects and structural validation for the validated research concepts. It does not yet provide resolver adapters, production SAT/UNSAT verification, CLI/API integrations, or production readiness.
+
+See `docs/PRODUCTION_SEMANTIC_CORE.md` and `AI_BUILD_CONTEXT.md`.
+
 ## Research question
 
 The project asks whether sufficiently rich structured dependency-resolution evidence can be normalized into a small semantic trace from which an independent verifier can derive a formally checked explanation without parsing human-readable diagnostics or depending on native resolver state.
