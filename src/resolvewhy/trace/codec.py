@@ -1214,6 +1214,10 @@ def serialize_trace(trace: Trace) -> bytes:
     """Return canonical UTF-8 JSON bytes for a production Trace."""
     if not isinstance(trace, Trace):
         raise TraceSerializationError("serialize_trace expects a resolvewhy.model.Trace")
+    if trace.schema != SCHEMA:
+        raise TraceSerializationError(
+            f"unsupported trace schema {trace.schema!r}; expected {SCHEMA!r}"
+        )
 
     # Never emit an artifact that the production structural validator would reject.
     from resolvewhy.validation import validate_trace
