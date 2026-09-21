@@ -215,3 +215,10 @@ The opening sections of this file preserve dated intermediate research states. T
 **Current status:** H2d = PARTIALLY SUPPORTED; H2e = NOT TESTED; technical validation = complete for the declared finite semantic fragment; production implementation = separate future decision.
 
 The clean reproducibility runner is intentionally narrower than the historical research record. It regenerates the 250-case mutation campaign and the current 64-world projection harness, but it does not regenerate the historical 18-case serialized corpus or the historical 256-world extended search.
+# Current status marker
+
+All sections above this marker are dated historical research stages. They are retained verbatim for auditability and are superseded by the latest sections below.
+
+**CURRENT:** H2d = PARTIALLY SUPPORTED; H2e = NOT TESTED; technical validation = complete for the declared finite semantic fragment; production implementation = separate future decision.
+
+See `research/FINAL_RESEARCH_SYNTHESIS.md` and `research/REPRODUCIBILITY_INDEX.md` for the consolidated current interpretation.
