@@ -73,11 +73,11 @@ This does not establish:
 
 No maintainer response has been invented or inferred.
 
-## Current gate
+## Current gate — historical stage
 
-**CONTINUE RESEARCH**
+**CONTINUE RESEARCH** was the status at this intermediate stage, before the subsequent real-world corpus, portability, trace-only, and final semantic-boundary work recorded later in this file.
 
-The next technical target is to test the revised candidate-coverage/provenance contract against adversarial real-world cases before building production infrastructure.
+The current repository state is documented in the final research synthesis: technical validation is complete for the declared semantic fragment; H2d is PARTIALLY SUPPORTED; H2e is NOT TESTED; production implementation remains a separate future decision.
 
 
 ## Real-world trace validation — 2026-09-21
