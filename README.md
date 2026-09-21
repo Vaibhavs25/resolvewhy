@@ -84,6 +84,24 @@ H2e remains **NOT TESTED**. The project has no substantive maintainer response t
 
 The RFC therefore records technical questions for maintainer feedback, not endorsement claims.
 
+## Reproducibility
+
+The research harness is runnable without resolver packages, package indexes, or network access:
+
+```bash
+python research/run_reproducibility.py
+```
+
+The explicit research tests are:
+
+```bash
+python -m unittest research.test_reproducibility
+```
+
+The current suite computes 18/18 deterministic serialized-fixture replay, 18/18 round trips, 18/18 hermetic replays, 2 executable subset-minimality checks, 250 mutation cases with zero false verified-proof acceptances, and 256 projection worlds with zero post-repair collisions.
+
+The 18-case replay is a deterministic serialized semantic fixture replay of the documented corpus classifications. It is not a fresh execution of all historical public resolver incidents. See `research/REPRODUCIBILITY_README.md` and `research/REPRODUCIBILITY_INDEX.md` for the exact evidence boundary.
+
 ## Research artifacts
 
 Key research records are under research/, including:
