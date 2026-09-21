@@ -72,6 +72,27 @@ def mutate_campaign(v):
     must("all mutation families present",set(families).issubset({r[1] for r in results}))
     return len(results),false_accepts
 
+
+def run_self_tests(v, c):
+    base=v["base_trace"]()
+    checks=[]
+    def record(name, ok):
+        checks.append((name, ok)); must(name, ok)
+    record("dangling references", v["verify"](v["mutate"](base,"dangling_ref"))[0]=="INVALID_TRACE")
+    record("duplicate IDs", (lambda t: (t["candidates"].append(copy.deepcopy(t["candidates"][0])), v["verify"](t)[0]=="INVALID_TRACE"))(copy.deepcopy(base))[1])
+    record("missing coverage attestation", v["verify"](v["mutate"](base,"coverage_attestation"))[0]=="INVALID_TRACE")
+    record("incomplete coverage", v["verify"](v["mutate"](base,"candidate_coverage"))[0]=="INSUFFICIENT_EVIDENCE")
+    record("malformed proof claim", v["verify"]({**copy.deepcopy(base),"proof_claim":"bad"})[0]=="INVALID_TRACE")
+    record("missing quantifier", v["verify"]({**copy.deepcopy(base),"proof_claim":{**base["proof_claim"],"quantifier":None}})[0]=="INVALID_TRACE")
+    record("missing evaluation domain", v["verify"](v["mutate"](base,"evaluation_domain"))[0]=="INVALID_TRACE")
+    record("invalid proof premise", v["verify"]({**copy.deepcopy(base),"proof_claim":{**base["proof_claim"],"premise_refs":["missing"]}})[0]=="INVALID_TRACE")
+    record("provenance failure", v["verify"](v["mutate"](base,"provenance"))[0]=="INVALID_TRACE")
+    record("activation preserved", v["verify"](base)[0]=="VERIFIED_UNSAT")
+    record("resolver-label disagreement", v["verify"]({**copy.deepcopy(base),"proof_claim":{**base["proof_claim"],"status_claim":"SAT"}})[0]=="VERIFIED_UNSAT")
+    artifact=copy.deepcopy(base); artifact["artifacts"][0]["compatible"]=False
+    record("artifact feasibility", v["verify"](artifact)[0]=="VERIFIED_UNSAT")
+    return checks
+
 def run():
     v=load(VERIFIER); c=load(COLLISION)
     base=v["base_trace"]()
@@ -82,6 +103,7 @@ def run():
     ok,deletions=v["minimality"](base)
     must("minimality",ok and all(x[1]=="VERIFIED_SAT" for x in deletions))
     must("claim disagreement recomputed",v["verify"]({**base,"proof_claim":{**base["proof_claim"],"status_claim":"SAT"}})[0]=="VERIFIED_UNSAT")
+    self_tests=run_self_tests(v,c)
     mutation_cases,false_accepts=mutate_campaign(v)
     branch=copy.deepcopy(base)
     branch["trace_scope"]="branch"
@@ -95,6 +117,7 @@ def run():
         td=Path(td); isolated=td/"verifier.py"; isolated.write_text(VERIFIER.read_text(encoding="utf-8"))
         p=subprocess.run([sys.executable,"-I",str(isolated)],cwd=td,capture_output=True,text=True)
         must("hermetic",p.returncode==0)
+    print(f"SELF_TESTS = {len(self_tests)}/{len(self_tests)}")
     print("REPRODUCIBILITY SUITE")
     print("TRACE_ONLY_CORPUS = 18/18 (historical serialized corpus; not freshly re-executed)")
     print("SERIALIZATION_ROUNDTRIP = 1/1 executable fixture; historical 18/18")
