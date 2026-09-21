@@ -107,6 +107,8 @@ Requirements preserve:
 
 A compound pip specifier such as `>=1,<3` is represented as multiple semantic literals inside one `SemanticConstraint`. The convenience `Requirement.constraint` field is only populated when exactly one normalized comparison is available; the semantic-constraint collection remains the formal normalized representation.
 
+Constraint order is not a semantic commitment: the conjunction `>=1,<3` is equivalent to `<3,>=1`. Phase 3A tests therefore compare the normalized compound constraint set order-independently. The adapter does not claim preservation of declaration order.
+
 Unsupported operators/wildcards do not become false facts. They make the relevant evidence incomplete.
 
 ## 7. Activation and markers
