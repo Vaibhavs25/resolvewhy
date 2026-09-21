@@ -23,7 +23,7 @@
 
 ### Nested PEP 508 markers
 
-A dependency can use a nested marker expression combining and/or with environment and extra variables. The current semantic slot is activation condition, so such expressions are representable when faithfully normalized. Exhaustive equivalence across every legal marker form and field combination has not been established. citeturn936757search1
+A dependency can use a nested marker expression combining and/or with environment and extra variables. The current semantic slot is activation condition, so such expressions are representable when faithfully normalized. Exhaustive equivalence across every legal marker form and field combination has not been established. 
 
 ### Multiple extras
 
@@ -50,13 +50,13 @@ The candidate/artifact distinction is sufficient to keep these facts separate, b
 
 ### Lock-constrained satisfiability
 
-The proposition "satisfiable under dependency semantics" must remain distinct from "satisfiable under dependency semantics plus lockfile restrictions." The current model can encode extra semantic constraints, but the full lockfile execution semantics have not been independently validated. citeturn639779search0
+The proposition "satisfiable under dependency semantics" must remain distinct from "satisfiable under dependency semantics plus lockfile restrictions." The current model can encode extra semantic constraints, but the full lockfile execution semantics have not been independently validated. 
 
 ## Outside the current guarantee
 
 ### Dynamic metadata generation
 
-Build backends can generate metadata during build hooks in an isolated build environment. citeturn639779search1turn936757search0
+Build backends can generate metadata during build hooks in an isolated build environment. 
 
 The current verifier can consume the resulting metadata if serialized, but does not independently reconstruct arbitrary backend computation.
 
@@ -66,7 +66,7 @@ Environment state can influence build-time computation. Those hidden inputs are 
 
 ### Hash/reproducibility semantics
 
-Hash restrictions can affect artifact admissibility, including pip's hash-checking mode. citeturn639779search2
+Hash restrictions can affect artifact admissibility, including pip's hash-checking mode. 
 
 The present evidence is insufficient to claim complete cross-resolver hash semantics.
 
@@ -76,7 +76,7 @@ A synthetic package node can be represented, but the relation defining which ins
 
 ### Arbitrary lockfile execution semantics
 
-The current pylock specification includes environment selectors, extras, dependency groups, package markers, Requires-Python, archives, hashes and sources. citeturn639779search0 Their complete interaction semantics remain outside the established guarantee.
+The current pylock specification includes environment selectors, extras, dependency groups, package markers, Requires-Python, archives, hashes and sources.  Their complete interaction semantics remain outside the established guarantee.
 
 ## Boundary rule
 
