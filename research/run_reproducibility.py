@@ -108,10 +108,17 @@ def run():
     must("SAT reconstruction",v["verify"](v["sat_fixture"]())[0]=="VERIFIED_SAT")
     rt=json.loads(json.dumps(base,sort_keys=True))
     must("round trip",v["verify"](base)==v["verify"](rt))
+    root_only=copy.deepcopy(base)
+    root_only["proof_claim"]["premise_refs"]=["c:root"]
+    must("proof premise affects proposition",v["verify"](root_only)[0]=="VERIFIED_SAT")
+    bad_status=copy.deepcopy(base)
+    bad_status["proof_claim"]["status_claim"]="SAT"
+    must("declared status is non-authoritative",v["verify"](bad_status)[0]=="VERIFIED_UNSAT")
     ok,deletions=v["minimality"](base)
     must("minimality",ok and all(x[1]=="VERIFIED_SAT" for x in deletions))
     must("claim disagreement recomputed",v["verify"]({**base,"proof_claim":{**base["proof_claim"],"status_claim":"SAT"}})[0]=="VERIFIED_UNSAT")
     self_tests=run_self_tests(v,c)
+    must("self-test count",len(self_tests)>=12)
     bad_prov=copy.deepcopy(base); bad_prov["provenance"][0]["evidence_refs"]=["unrelated"]
     must("unrelated provenance",v["verify"](bad_prov)[0]=="INVALID_TRACE")
     cycle=copy.deepcopy(base)
