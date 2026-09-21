@@ -455,14 +455,9 @@ def normalize_capture(
 
     buffer = captured.buffer
     counters = [0]
-    candidate_ids = _ObjectIds()
-    requirement_ids = _ObjectIds()
-
     candidate_models: list[Candidate] = []
     candidate_views: dict[str, CandidateView] = {}
     candidate_ids_by_semantics: dict[object, str] = {}
-    native_candidate_to_ref: dict[int, str] = {}
-
     def _merge_candidate_views(existing: CandidateView, incoming: CandidateView) -> CandidateView:
         artifacts = tuple(dict.fromkeys(existing.artifacts + incoming.artifacts))
         requires_python = tuple(dict.fromkeys(existing.requires_python + incoming.requires_python))
@@ -488,7 +483,6 @@ def normalize_capture(
                 counters[0] += 1
                 ref = f"cand:{counters[0]:04d}"
             candidate_ids_by_semantics.setdefault(semantic_key, ref)
-        native_candidate_to_ref[id(native)] = ref
         if ref in candidate_views:
             candidate_views[ref] = _merge_candidate_views(candidate_views[ref], view)
         else:
@@ -578,7 +572,7 @@ def normalize_capture(
             return req_ref, view, False
 
         view = semantics.requirement_view(event.requirement)
-        req_ref = requirement_ids.get(event.requirement, "req", counters)
+        req_ref = f"req:{event.sequence:04d}"
         requirements.append(
             Requirement(
                 id=req_ref,
@@ -888,8 +882,8 @@ def normalize_capture(
         target = candidate_id(event.candidate)
         premise_refs: list[TraceRef] = []
         for requirement, parent in event.information:
-            for candidate_req_event, req_ref, _ in requirement_event_refs:
-                    if candidate_req_event.requirement is requirement:
+            for candidate_req_event, req_ref, _, _ in requirement_event_refs:
+                if candidate_req_event.requirement is requirement:
                     premise_refs.append(TraceRef(ReferenceKind.REQUIREMENT, req_ref))
                     break
             if parent is not None:
@@ -917,7 +911,7 @@ def normalize_capture(
     for event in buffer.conflicts:
         term_refs: list[TraceRef] = []
         for requirement, parent in event.causes:
-            for candidate_req_event, req_ref, _ in requirement_event_refs:
+            for candidate_req_event, req_ref, _, _ in requirement_event_refs:
                 if candidate_req_event.requirement is requirement:
                     term_refs.append(TraceRef(ReferenceKind.REQUIREMENT, req_ref))
                     break
