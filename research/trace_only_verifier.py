@@ -67,10 +67,10 @@ def candidate_usable(c,t,env):
 def branch_sat(t,env):
     candidates=[c for c in t['candidates'] if candidate_usable(c,t,env)]
     # The proof claim premises select the semantic constraints that participate
-    # in the proposition. The executable fragment supports requirement and
-    # dependency semantic constraints only.
+    # in the proposition. This executable fragment supports requirement and
+    # dependency constraints only.
     premise_ids=set(t['proof_claim'].get('premise_refs',[]))
-    selected=t['semantic_constraints'] if not premise_ids else [s for s in t['semantic_constraints'] if s.get('id') in premise_ids]
+    selected=[s for s in t['semantic_constraints'] if s.get('id') in premise_ids]
     root_ids={s.get('source_ref') for s in selected if s.get('kind')=='requirement'}
     dep_ids={s.get('source_ref') for s in selected if s.get('kind')=='dependency'}
     requirements=[r for r in t['requirements'] if r.get('id') in root_ids]
