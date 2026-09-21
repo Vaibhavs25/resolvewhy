@@ -210,9 +210,9 @@ The current runner independently regenerates:
 - hermetic replay for that fixture;
 - subset-minimality for that fixture;
 - 250 deterministic mutation cases;
-- the current 64-world projection harness.
+- the 256-world extended projection search.
 
-The broader 18-case corpus and 256-world extended search remain documented research records and are linked through `research/REPRODUCIBILITY_INDEX.md`.
+The broader 18-case corpus remains a documented serialized research record and is linked through `research/REPRODUCIBILITY_INDEX.md`.
 
 ## Serialization fuzzing and projection collision
 
