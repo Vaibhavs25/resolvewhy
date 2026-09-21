@@ -134,7 +134,6 @@ def run():
         td=Path(td); isolated=td/"verifier.py"; isolated.write_text(VERIFIER.read_text(encoding="utf-8"))
         p=subprocess.run([sys.executable,"-I",str(isolated)],cwd=td,capture_output=True,text=True)
         must("hermetic",p.returncode==0)
-    print(f"SELF_TESTS = {len(self_tests)}/{len(self_tests)}")
     print("REPRODUCIBILITY SUITE")
     print("TRACE_ONLY_CORPUS = 18/18 (historical serialized corpus; not freshly re-executed)")
     print("SERIALIZATION_ROUNDTRIP = 1/1 executable fixture; historical 18/18")
@@ -145,6 +144,7 @@ def run():
     print(f"PROJECTION_WORLDS = {worlds}")
     print(f"POST_REPAIR_COLLISIONS = {repaired}")
     print(f"RAW_PRE_REPAIR_COLLISIONS = {raw}")
+    print(f"SELF_TESTS = {len(self_tests)}/{len(self_tests)}")
     print(f"SELF_TESTS = {len(self_tests)}/{len(self_tests)}")
 if __name__=="__main__":
     run()
