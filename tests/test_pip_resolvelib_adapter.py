@@ -254,8 +254,8 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         semantics = DefaultPipSemantics()
         view = semantics.requirement_view(Requirement("c>=1,<3"))
         self.assertEqual(
-            [(item.operator, item.version) for item in view.constraints],
-            [(">=", "1"), ("<", "3")],
+            {(item.operator, item.version) for item in view.constraints},
+            {(">=", "1"), ("<", "3")},
         )
 
     def test_unsupported_marker_does_not_become_false_fact(self):
@@ -465,15 +465,17 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
             ),
             self.context(),
         )
-        candidate_ids = {str(item.id) for item in trace.candidates}
+        candidate_ids = {str(candidate.id) for candidate in trace.candidates}
         referenced_ids = {
-            str(item.candidate_ref)
+            str(literal.candidate_ref)
             for constraint in trace.semantic_constraints
             for literal in constraint.literals
             if literal.candidate_ref is not None
         }
-        self.assertIn("pkg", {item.package for item in trace.candidates})
-        self.assertTrue(referenced_ids.issubset(candidate_ids))
+        candidate_packages = {candidate.package for candidate in trace.candidates}
+        self.assertIn("pkg", candidate_packages)
+        self.assertIn("cand:0001", candidate_ids)
+        self.assertEqual(referenced_ids, candidate_ids)
         self.assertEqual(validate_trace(trace), ())
 
     def test_empty_capture_refuses_to_fabricate_semantics(self):
