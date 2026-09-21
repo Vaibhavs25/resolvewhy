@@ -1,5 +1,14 @@
 # H2e status
 
+## Current status — 2026-09-21
+
+- **H2d:** PARTIALLY SUPPORTED — bounded semantic portability.
+- **H2e:** NOT TESTED — 0 substantive maintainer responses.
+- **Technical validation:** complete for the declared finite semantic fragment.
+- **Production implementation:** separate future decision; not established by this research.
+
+Sections below preserve the dated research history, including earlier intermediate labels such as H2d UNPROVEN and CONTINUE RESEARCH. Those statements describe the state at their respective stage and are superseded by the later dated updates.
+
 Maintainer-validation status: **NOT TESTED**
 
 ## Public-architecture validation — 2026-09-21
