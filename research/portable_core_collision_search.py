@@ -23,6 +23,7 @@ class Candidate:
     requires_python: str | None = None
     source: str = "index:A"
     artifact: str | None = None
+    prerelease: bool = False
 
 def freeze(value: Any) -> Any:
     if isinstance(value, dict):
@@ -50,12 +51,14 @@ def branch_truth(world: dict[str, Any], env: str) -> bool:
     if not world["activation_active"]:
         return True
     candidate = world["candidate"]
+    if candidate.prerelease and world["resolution_policy"]["prerelease"] == "disallow":
+        return False
     return python_compatible(candidate, env) and artifact_compatible(candidate, env)
 
 def truth(world: dict[str, Any]) -> str:
     if not world["activation_active"]:
         return "SAT"
-    if world["candidate_coverage"]["status"] != "complete":
+    if world["candidate_coverage"]["status"] != "complete" or not world["candidate_coverage"]["attested"]:
         return "INSUFFICIENT_EVIDENCE"
 
     results = [branch_truth(world, env) for env in world["evaluation_domain"]]
@@ -108,6 +111,7 @@ def make_world(family: str, domain: tuple[str, ...], variant: int) -> dict[str, 
         ">=3.10",
         source=source,
         artifact="windows-only" if (variant % 8) == 6 else None,
+        prerelease=(variant % 4) in {1, 2},
     )
     coverage = {
         "status": "complete" if (variant % 5) != 4 else "partial",
