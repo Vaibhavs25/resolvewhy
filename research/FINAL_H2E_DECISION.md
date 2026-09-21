@@ -312,3 +312,7 @@ The audit identifies the nearest realistic cases outside the established guarant
 No schema change was made.
 
 H2e remains NOT TESTED and is unaffected by this technical experiment.
+## Legacy intermediate status notes
+**Historical only:** sections before the final trace-only and semantic-boundary updates contain intermediate states such as H2d UNPROVEN and CONTINUE RESEARCH. Those statements describe their dated research stage and are superseded by the later dated updates in this document.
+
+The current status is: H2d PARTIALLY SUPPORTED; H2e NOT TESTED; technical validation complete for the declared semantic fragment; production implementation remains a separate future decision.
