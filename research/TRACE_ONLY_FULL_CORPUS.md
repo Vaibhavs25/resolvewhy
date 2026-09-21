@@ -1,6 +1,8 @@
-## Reproducibility note
+# Reproducibility status
 
-This document is a historical record of the completed 18-case serialized replay. The current clean runner does not materialize those 18 fixtures, so it does not claim to regenerate this table. For executable clone-and-run checks, use `research/run_reproducibility.py`.
+The current clean reproducibility runner now replays all 18 serialized semantic fixtures from `research/fixtures/trace_corpus.py`, performs a JSON round trip, and runs isolated verification for each case. This reproduces the recorded trace-only classification result without re-running the original public incidents.
+
+The 18-case result remains a **fixture replay**, not a fresh execution of all historical resolver issues. Use `python research/run_reproducibility.py` for the executable reproduction path.
 
 # Trace-Only Full Corpus
 
