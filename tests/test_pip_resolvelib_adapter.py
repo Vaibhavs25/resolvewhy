@@ -188,6 +188,36 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertEqual(result.trace.evidence_state.overall, EvidenceStateKind.INCOMPLETE)
         self.assertNotEqual(result.trace.proof_claim.status_claim.value, "VERIFIED_UNSAT")
 
+    def test_attested_candidate_coverage_is_preserved(self):
+        from resolvewhy.model import EvidenceObservation, TraceRef, ReferenceKind
+        attestation = CoverageAttestation(
+            kind=CoverageAttestationKind.AUTHORITATIVE_FINITE_DOMAIN,
+            evidence_refs=(TraceRef(ReferenceKind.EVIDENCE, "obs:external-coverage"),),
+        )
+        context = AdapterContext(
+            runtime_context=self.context().runtime_context,
+            resolution_policy=self.context().resolution_policy,
+            evaluation_domain=self.context().evaluation_domain,
+            coverage_attestations={"a": attestation},
+            additional_evidence=(
+                EvidenceObservation(
+                    id="obs:external-coverage",
+                    kind="authoritative-finite-domain",
+                    state=EvidenceStateKind.KNOWN_FACT,
+                    supports_refs=(),
+                    source_namespace="test",
+                ),
+            ),
+            resolver_name="pip/resolvelib-test",
+        )
+        result = self.adapter(
+            {"a": (FakeCandidate("a", Version("1.0")),)},
+            context=context,
+        ).resolve([Requirement("a==1.0")])
+        domain = next(item for item in result.trace.candidate_domains if item.identifier == "a")
+        self.assertEqual(domain.coverage.status, CoverageStatus.COMPLETE)
+        self.assertIsNotNone(domain.coverage.attestation)
+
     def test_unknown_candidate_coverage_is_conservative(self):
         result = self.adapter(
             {"a": (FakeCandidate("a", Version("1.0")),)}
@@ -347,6 +377,62 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
     def test_adapter_is_available_from_adapter_namespace_without_resolver_import(self):
         from resolvewhy.adapters.pip_resolvelib import PipResolvelibAdapter
         self.assertIsNotNone(PipResolvelibAdapter)
+
+    def test_explicit_candidate_lookup_is_materialized_into_trace(self):
+        from dataclasses import dataclass
+        from resolvewhy.adapters.pip_resolvelib.capture import (
+            CaptureBuffer,
+            CapturedRun,
+            RequirementEvent,
+        )
+        from resolvewhy.adapters.pip_resolvelib.normalize import normalize_capture
+
+        candidate = FakeCandidate("pkg", Version("1.0"))
+
+        @dataclass(frozen=True)
+        class ExplicitRequirement:
+            name: str
+            specifier: object
+            candidate: FakeCandidate
+
+            def __str__(self):
+                return "pkg==1.0"
+
+            def get_candidate_lookup(self):
+                return self.candidate, None
+
+        req = ExplicitRequirement(
+            name="pkg",
+            specifier=Requirement("pkg==1.0").specifier,
+            candidate=candidate,
+        )
+        buffer = CaptureBuffer()
+        buffer.requirements.append(
+            RequirementEvent(
+                sequence=buffer.next_sequence(),
+                requirement=req,
+                parent=None,
+            )
+        )
+        buffer.outcome = "resolved"
+        trace = normalize_capture(
+            CapturedRun(
+                buffer=buffer,
+                resolver_result=object(),
+                native_error=None,
+            ),
+            self.context(),
+        )
+        candidate_ids = {str(item.id) for item in trace.candidates}
+        referenced_ids = {
+            str(item.candidate_ref)
+            for constraint in trace.semantic_constraints
+            for literal in constraint.literals
+            if literal.candidate_ref is not None
+        }
+        self.assertIn("pkg", {item.package for item in trace.candidates})
+        self.assertTrue(referenced_ids.issubset(candidate_ids))
+        self.assertEqual(validate_trace(trace), ())
 
     def test_empty_capture_refuses_to_fabricate_semantics(self):
         from resolvewhy.adapters.pip_resolvelib.capture import CaptureBuffer, CapturedRun
