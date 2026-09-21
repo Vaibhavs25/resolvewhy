@@ -158,3 +158,13 @@ The experiment established the proof-artifact validity boundary for the tested f
 The current committed harness is research/trace_only_verifier.py. The trace-only result is technical evidence only and does not affect H2e.
 
 **H2e remains NOT TESTED — 0 substantive maintainer responses.**
+
+## Trace-only verification update — 2026-09-21
+
+The trace-only experiment found a proof-artifact boundary issue: a multi-environment result cannot be fully specified by runtime context plus a universal/fork policy and evaluation domain alone. The proof claim itself must explicitly bind its quantifier to the evaluation domain and to the semantic premises being verified.
+
+This is a genuine semantic requirement for a self-contained proof artifact, so the revised schema was updated with an explicit proof-claim concept. The committed trace-only verifier also enforces structural integrity before semantic reasoning and distinguishes INVALID_TRACE from INSUFFICIENT_EVIDENCE.
+
+The trace-only harness demonstrates hermetic reconstruction of a serialized contradiction without consulting native resolver state. Full corpus-scale trace-only replay remains bounded by the finite verifier fragment currently implemented in the research harness.
+
+H2d remains PARTIALLY SUPPORTED. H2e remains NOT TESTED with 0 substantive maintainer responses.
