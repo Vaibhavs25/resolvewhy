@@ -91,6 +91,7 @@ def run():
     require("subset-minimal baseline", minimal)
     require("all three deletion checks executed", len(deletion_results) == 3)
     require("deletions become SAT", all(x[1] == "VERIFIED_SAT" for x in deletion_results))
+    require("reported core size", len(v["base_trace"]().get("claimed_core", [])) == 2)
 
     expected = {
         "coverage_attestation": "INVALID_TRACE",
