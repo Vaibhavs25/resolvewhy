@@ -225,6 +225,8 @@ def minimality(t):
     if verify(t)[0] != 'VERIFIED_UNSAT':
         return False, []
     core_ids=list(t.get('claimed_core', []))
+    if set(core_ids) != set(t['proof_claim'].get('premise_refs', [])):
+        return False, []
     checks=[]
     for cid in core_ids:
         x=clone(t)
