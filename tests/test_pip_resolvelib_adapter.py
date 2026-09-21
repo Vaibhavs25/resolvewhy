@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import sys
 import unittest
 from dataclasses import dataclass
@@ -155,7 +154,7 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
             [Requirement("a==1.0"), Requirement("b==1.0")]
         )
         self.assertEqual(result.native_status_claim, "UNSAT")
-        self.assertEqual(result.native_error_type, "RequirementsConflicted")
+        self.assertEqual(result.native_error_type, "ResolutionImpossible")
         self.assertIsInstance(result.trace, Trace)
         self.assertEqual(result.trace.schema, "resolvewhy-trace/1.0")
         self.assertEqual(validate_trace(result.trace), ())
