@@ -89,6 +89,11 @@ def verify(t):
     ok,why=structural(t)
     if not ok:return 'INVALID_TRACE',why
     if t['evidence_state'].get('overall') in {'missing','incomplete','unknown'}: return 'INSUFFICIENT_EVIDENCE','evidence incomplete'
+    # The finite executable fragment currently supports fixed prerelease/source policy
+    # only structurally; unsupported policy semantics are not inferred.
+    policy=t['resolution_policy']
+    if policy.get('prerelease') not in {'disallow'} or policy.get('source_selection') not in {'fixed'}:
+        return 'INSUFFICIENT_EVIDENCE','unsupported executable policy semantics'
     if any(q.get('coverage',{}).get('status')!='complete' for q in t['candidate_domains']): return 'INSUFFICIENT_EVIDENCE','candidate coverage incomplete'
     results=[branch_sat(t,e) for e in t['evaluation_domain'] if isinstance(e,dict) and 'id' in e]
     if len(results)!=len(t['evaluation_domain']): return 'INVALID_TRACE','malformed evaluation domain entry'
