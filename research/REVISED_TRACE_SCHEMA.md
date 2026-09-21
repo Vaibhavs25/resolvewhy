@@ -17,6 +17,7 @@ Conceptual fields:
 - resolver version/commit
 - declared trace scope
 - runtime_context
+- evaluation_domain (when the proof claim is quantified over more than one environment)
 - resolution_policy
 - candidate domains
 - requirements
@@ -156,7 +157,40 @@ Separate policy such as:
 - cutoff/exclusion policy
 - lockfile/preferences inputs
 
-## 9. Rejection observations
+## 9. Evaluation domain / proof scope
+
+Runtime context answers: which environment produced this observation?
+
+Evaluation domain answers: over which environment set or partition is the semantic claim being made?
+
+This distinction is required for universal or forked resolution.
+
+Conceptual shape:
+
+~~~json
+{
+  "id": "eval-domain:1",
+  "kind": "finite_environment_set",
+  "environments": [
+    "env:py3.13-linux",
+    "env:py3.9-linux"
+  ],
+  "evidence_refs": ["obs:77"]
+}
+~~~
+
+Rules:
+
+1. A single-environment claim MAY use a singleton evaluation domain corresponding to the captured runtime context.
+2. A universal/forked claim MUST explicitly identify the evaluation domain; a policy value such as universal or fork is not itself the domain.
+3. Each environment or partition in the declared domain MUST link to the relevant runtime context and proof premises.
+4. The evaluation domain is proof scope, not resolver policy.
+5. An independent proof engine MUST verify the semantic constraints within each applicable branch and respect the quantifier over the declared domain.
+6. A single active runtime observation MUST NOT be promoted into a universal resolution claim.
+
+The distinction is essential because the same candidate/dependency facts may be satisfiable on the active interpreter while unsatisfiable on another environment that belongs to the declared supported domain.
+
+## 10. Rejection observations
 
 A rejection is an observation, not automatically a proof.
 
@@ -187,7 +221,7 @@ Keep the taxonomy small.
 
 A rejection does not imply every other candidate was rejected.
 
-## 10. Incompatibilities
+## 11. Incompatibilities
 
 Native resolver conflict objects are not assumed to share one universal mathematical meaning.
 
@@ -207,7 +241,7 @@ The normalized proof core uses semantic constraints/literals and provenance.
 
 Native derivation objects remain namespaced evidence.
 
-## 11. Provenance
+## 12. Provenance
 
 Derived claims MUST carry provenance.
 
@@ -225,7 +259,7 @@ Conceptual shape:
 
 A human-readable explanation string never substitutes for proof provenance.
 
-## 12. Evidence states
+## 13. Evidence states
 
 Observations should distinguish at least:
 - known_fact
@@ -236,7 +270,7 @@ Observations should distinguish at least:
 
 The vocabulary may grow, but evidence absence must remain distinguishable from evidence of absence.
 
-## 13. Insufficient evidence
+## 14. Insufficient evidence
 
 The downstream engine MUST return:
 
@@ -252,7 +286,7 @@ when a proof obligation depends on evidence that is:
 
 It MUST NOT silently convert those states into UNSAT.
 
-## 14. No-candidate proof rule
+## 15. No-candidate proof rule
 
 A claim equivalent to:
 
@@ -262,7 +296,7 @@ is permitted only when:
 
 1. the candidate domain is explicitly identified;
 2. source/index scope is explicit;
-3. runtime context and relevant resolution policy are explicit;
+3. runtime context and relevant resolution policy are explicit; if the claim is quantified across environments, the evaluation domain is also explicit;
 4. coverage is complete for that exact domain;
 5. completeness has an explicit attestation/evidence reference;
 6. relevant candidate/artifact filtering is represented;
@@ -272,13 +306,14 @@ An empty candidate list alone is never sufficient.
 A rejection event alone is never sufficient.
 Resolver exhaustion alone is never sufficient without domain attestation.
 
-## 15. Normalization boundary
+## 16. Normalization boundary
 
 Normalize:
 - requirement
 - opaque candidate identity
 - dependency edge
 - runtime context
+- evaluation domain when the proof claim is multi-environment
 - resolution policy
 - candidate-domain coverage
 - semantic constraint/literal
@@ -294,7 +329,7 @@ Keep optional/namespaced:
 - artifact-selection internals
 - provider-specific rejection structures
 
-## 16. Core safety invariant
+## 17. Core safety invariant
 
 Every proof-strengthening statement must carry the evidence that justifies its scope.
 
@@ -312,10 +347,12 @@ no candidate satisfies constraints
 
 Only then may the proof engine derive UNSAT.
 
-## 17. Research status
+## 18. Research status
 
 The revised contract survived the targeted adversarial experiment documented in:
 
 research/REVISED_TRACE_ADVERSARIAL_AUDIT.md
+
+The portable-core sufficiency experiment later found a projection collision for universal/forked claims when the declared evaluation domain was not represented separately from the active runtime context. The smallest repair is the explicit evaluation_domain concept documented above.
 
 It is not an ecosystem standard and has not received maintainer endorsement.
