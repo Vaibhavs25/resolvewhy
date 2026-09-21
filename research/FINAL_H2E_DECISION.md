@@ -251,3 +251,16 @@ The revised schema was updated accordingly. This is a genuine narrowing of the p
 **H2e remains NOT TESTED.** The experiment used no maintainer feedback, sent no outreach, and does not alter the 0 substantive-response status.
 
 Production architecture remains NOT APPROVED.
+
+
+## Trace-only verification update — 2026-09-21
+
+The trace-only experiment tested the stronger proposition that a serialized portable trace can be used as a self-contained proof-supporting artifact after detaching from the original resolver, provider, indexes, network, diagnostics, and native derivation state.
+
+A trace-only hermetic verifier was added. Structural corruption such as missing required fields, dangling references, and complete candidate coverage without an attestation is rejected as INVALID_TRACE; incomplete proof evidence is classified as INSUFFICIENT_EVIDENCE. A serialized finite contradiction can be reconstructed without native resolver access.
+
+The experiment also exposed one semantic proof-artifact requirement: multi-environment proof claims must explicitly bind a result quantifier to the declared evaluation domain. This is now represented by an explicit proof-claim concept in the revised schema. The repair was required by the proof-artifact falsification test.
+
+Accordingly, the trace-only stage is currently **B. TRACE-ONLY VERIFICATION REQUIRES ANOTHER SEMANTIC FIELD**, with the smallest repair being explicit proof-claim scope binding. After that repair, the hermetic verifier boundary is sufficient for the tested finite fragment, but full corpus-scale replay is not yet established by the committed harness.
+
+H2d therefore remains PARTIALLY SUPPORTED, not upgraded. H2e remains NOT TESTED with 0 substantive maintainer responses. Production architecture remains NOT APPROVED.
