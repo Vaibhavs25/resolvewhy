@@ -13,7 +13,6 @@ from packaging.requirements import Requirement
 from packaging.version import Version
 
 from resolvewhy.model import (
-    CandidateCoverage,
     CoverageAttestation,
     CoverageAttestationKind,
     CoverageStatus,
@@ -200,17 +199,18 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
             all(domain.coverage.status is CoverageStatus.UNKNOWN for domain in domains)
         )
 
-    def test_attested_candidate_coverage_becomes_complete_only_for_declared_scope(self):
+    def test_attested_candidate_coverage_requires_typed_external_evidence(self):
+        from resolvewhy.model import TraceRef, ReferenceKind
         attestation = CoverageAttestation(
             kind=CoverageAttestationKind.AUTHORITATIVE_FINITE_DOMAIN,
-            evidence_refs=(),
+            evidence_refs=(TraceRef(ReferenceKind.EVIDENCE, "obs:external-coverage"),),
         )
-        with self.assertRaises(ValueError):
-            AdapterContext(
-                runtime_context=self.context().runtime_context,
-                resolution_policy=self.context().resolution_policy,
-                coverage_attestations={"a": attestation},
-            )
+        context = self.context(coverage={"a": attestation})
+        self.assertIn("a", context.coverage_attestations)
+        self.assertEqual(
+            context.coverage_attestations["a"].evidence_refs[0].id,
+            "obs:external-coverage",
+        )
 
     def test_marker_preservation(self):
         semantics = DefaultPipSemantics()
@@ -333,32 +333,6 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         )
         with self.assertRaises(AdapterNormalizationError):
             normalize_capture(captured, self.context())
-
-    def test_explicit_complete_coverage_can_be_supplied_as_external_evidence(self):
-        from resolvewhy.adapters.pip_resolvelib.capture import CaptureBuffer, CapturedRun
-        from resolvewhy.adapters.pip_resolvelib.normalize import normalize_capture
-
-        attestation = CoverageAttestation(
-            kind=CoverageAttestationKind.AUTHORITATIVE_FINITE_DOMAIN,
-            evidence_refs=(
-                # The adapter must see this evidence too; it is not allowed to
-                # manufacture the attestation source.
-                {
-                    # Intentional type error is caught by this test's setup below.
-                },
-            ),
-        )
-        # This test exists as a documented API boundary rather than a runtime
-        # integration assertion. The production model requires typed TraceRef
-        # evidence references, so constructing an attestation with an invalid
-        # Python object is rejected before normalization.
-        with self.assertRaises(ValueError):
-            AdapterContext(
-                runtime_context=self.context().runtime_context,
-                resolution_policy=self.context().resolution_policy,
-                coverage_attestations={"a": attestation},
-            )
-
 
 if __name__ == "__main__":
     unittest.main()
