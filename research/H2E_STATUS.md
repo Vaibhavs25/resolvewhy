@@ -11,6 +11,8 @@ Sections below preserve the dated research history, including earlier intermedia
 
 Maintainer-validation status: **NOT TESTED**
 
+> Historical-status rule: dated sections below may retain earlier labels such as H2d UNPROVEN or CONTINUE RESEARCH. Those labels describe the state at that time and are superseded by the current-status block above and the final synthesis.
+
 ## Public-architecture validation — 2026-09-21
 
 An independent adversarial architecture audit was completed against current upstream source/documentation for:
