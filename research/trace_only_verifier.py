@@ -46,6 +46,11 @@ def structural(t):
     req_ids={x.get('id') for x in t['requirements'] if isinstance(x,dict)}
     dep_ids={x.get('id') for x in t['dependencies'] if isinstance(x,dict)}
     sem_by_id={x.get('id'):x for x in t['semantic_constraints'] if isinstance(x,dict)}
+    for s in t['semantic_constraints']:
+        if not isinstance(s,dict): return False,'invalid semantic constraint'
+        if s.get('kind')=='requirement' and s.get('source_ref') not in req_ids: return False,'dangling semantic requirement ref'
+        if s.get('kind')=='dependency' and s.get('source_ref') not in dep_ids: return False,'dangling semantic dependency ref'
+        if s.get('kind') not in {'requirement','dependency'}: return False,'unsupported semantic constraint kind'
     for e in t['dependencies']:
         if e.get('parent_candidate') not in ids: return False,'dangling dependency parent'
         if 'requirement' not in e: return False,'missing dependency requirement'
