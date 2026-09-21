@@ -68,9 +68,12 @@ def mutate_campaign(v):
         results.append((242+j,"targeted",json.dumps(t,sort_keys=True,separators=(",",":")),v["verify"](t)[0]))
     must("250 distinct mutations",len({r[2] for r in results})==250)
     false_accepts=sum(r[3] in {"VERIFIED_SAT","VERIFIED_UNSAT"} for r in results)
+    verdict_counts={}
+    for _, fam, _, verdict in results:
+        verdict_counts[verdict]=verdict_counts.get(verdict,0)+1
     must("mutation false accepts",false_accepts==0)
     must("all mutation families present",set(families).issubset({r[1] for r in results}))
-    return len(results),false_accepts
+    return len(results),false_accepts,verdict_counts
 
 
 def run_self_tests(v, c):
@@ -119,7 +122,7 @@ def run():
         {"id":"p4","premise_refs":["p3"],"evidence_refs":[]},
     ]
     must("provenance cycle",v["verify"](cycle)[0]=="INVALID_TRACE")
-    mutation_cases,false_accepts=mutate_campaign(v)
+    mutation_cases,false_accepts,mutation_verdicts=mutate_campaign(v)
     branch=copy.deepcopy(base)
     branch["trace_scope"]="branch"
     branch["proof_claim"]["quantifier"]="branch"
@@ -141,6 +144,7 @@ def run():
     print("SUBSET_MINIMAL_PROOFS = 1 executable fixture; historical 2")
     print(f"MUTATION_CASES = {mutation_cases}")
     print(f"MUTATION_FALSE_ACCEPTS = {false_accepts}")
+    print(f"MUTATION_VERDICT_COUNTS = {mutation_verdicts}")
     print(f"PROJECTION_WORLDS = {worlds}")
     print(f"POST_REPAIR_COLLISIONS = {repaired}")
     print(f"RAW_PRE_REPAIR_COLLISIONS = {raw}")
