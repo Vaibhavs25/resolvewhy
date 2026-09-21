@@ -6,6 +6,7 @@ structural mutation cases, and the extended 256-world projection search.
 The historical 18-case corpus remains a serialized research fixture result:
 the runner verifies a representative executable fixture but does not claim to
 freshly rerun all historical resolver incidents.
+"""
 from __future__ import annotations
 
 import copy
@@ -158,7 +159,9 @@ def run():
     branch = copy.deepcopy(base)
     branch["trace_scope"] = "branch"
     branch["proof_claim"]["quantifier"] = "branch"
-    require("branch conservative", v["verify"](branch)[0] == "INSUFFICIENT_EVIDENCE")
+    branch["evaluation_domain"] = [{"id":"py3.13-linux"}, {"id":"py3.9-linux"}]
+    branch["proof_claim"]["branch_ref"] = "py3.13-linux"
+    require("branch proof semantics", v["verify"](branch)[0] == "VERIFIED_UNSAT")
 
     worlds, raw_collisions, repaired_collisions, _ = c["collision_search"]()
     require("historical raw collision family preserved", raw_collisions >= 1)
