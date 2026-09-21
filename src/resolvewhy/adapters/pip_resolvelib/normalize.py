@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
 from resolvewhy.model import (
@@ -547,7 +547,17 @@ def normalize_capture(
             consumed_req_events.add(req_ref)
             return req_ref, view, False
 
-        view = semantics.requirement_view(event.requirement)
+        base_view = semantics.requirement_view(event.requirement)
+        view = replace(
+            base_view,
+            complete=False,
+            unsupported_reasons=tuple(
+                dict.fromkeys(
+                    base_view.unsupported_reasons
+                    + ("dependency requirement was observed before reporter.adding_requirement()",)
+                )
+            ),
+        )
         req_ref = f"req:{event.sequence:04d}"
         requirements.append(
             Requirement(
@@ -560,6 +570,19 @@ def normalize_capture(
                 evidence_refs=(TraceRef(ReferenceKind.EVIDENCE, f"obs:req:{req_ref}"),),
             )
         )
+        identifier = semantics.identifier_text(
+            getattr(
+                event.requirement,
+                "name",
+                getattr(event.requirement, "project_name", view.package),
+            )
+        )
+        synthetic_event = RequirementEvent(
+            sequence=event.sequence,
+            requirement=event.requirement,
+            parent=event.parent,
+        )
+        requirement_event_refs.append((synthetic_event, req_ref, view, identifier))
         return req_ref, view, True
 
     semantic_constraints: list[SemanticConstraint] = []
@@ -698,22 +721,6 @@ def normalize_capture(
             EvidenceStateKind.INCOMPLETE if synthesized or not view.complete else EvidenceStateKind.KNOWN_FACT,
             supports=(TraceRef(ReferenceKind.DEPENDENCY, edge_ref),),
         )
-        if synthesized:
-            evidence_id = f"obs:req:{req_ref}"
-            add_evidence(
-                evidence_id,
-                "resolver-requirement",
-                EvidenceStateKind.INCOMPLETE,
-                supports=(TraceRef(ReferenceKind.REQUIREMENT, req_ref),),
-            )
-            add_requirement_constraint(
-                req_ref,
-                view,
-                evidence_id=evidence_id,
-                parent_candidate_ref=parent_ref,
-                constraint_kind=SemanticConstraintKind.DEPENDENCY,
-            )
-
     # Requires-Python and artifact observations are candidate-level facts.
     artifacts = []
     seen_artifacts: set[tuple[str, str | None, tuple[str, ...], str | None, bool | None, str]] = set()
