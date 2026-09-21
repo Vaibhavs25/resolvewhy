@@ -104,3 +104,20 @@ The clean runner verifies the following executable cases in the committed finite
 10. Explicit branch selection through `proof_claim.branch_ref` within the fixture domain.
 11. Resolver-label disagreement: the declared SAT/UNSAT label is ignored in favor of recomputation.
 12. Uninterpretable finite semantic data is rejected as `INVALID_TRACE`.
+
+
+## Test entry point
+
+Run the explicit standard-library test suite with:
+
+```bash
+python -m unittest research.test_reproducibility
+```
+
+For a machine-readable aggregate summary:
+
+```bash
+python research/run_reproducibility.py --json
+```
+
+Both entry points are network-free and use only committed research code.
