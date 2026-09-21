@@ -5,6 +5,10 @@ OPS = {'==':lambda a,b:a==b,'!=':lambda a,b:a!=b,'<':lambda a,b:a<b,'<=':lambda 
 def ver(v): return tuple(int(x) for x in v.split('.'))
 def satv(v, op, rhs): return OPS[op](ver(v),ver(rhs))
 
+# EXECUTABLE BOUNDARY: this research verifier intentionally implements only the finite fixture fragment below.
+# Unsupported marker grammars, artifact-selection/build semantics, lockfile semantics,
+# and generic branch selectors are not inferred; unsupported policy values fail closed.
+
 def structural(t):
     required=['schema','trace_scope','requirements','candidates','artifacts','dependencies','runtime_contexts','evaluation_domain','resolution_policy','candidate_domains','semantic_constraints','provenance','evidence_state','proof_claim']
     missing=[x for x in required if x not in t]
