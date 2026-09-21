@@ -290,3 +290,24 @@ Decision: REVISE resolvewhy-trace/v0.
 The revision is required to prevent false proofs when candidate discovery, filtering, provenance or conflict semantics are owned by different layers of a resolver architecture.
 
 H2e remains NOT TESTED because this audit contains no maintainer feedback.
+
+
+## Revised-contract adversarial results — 2026-09-21
+
+The revised field semantics were tested against local pip 25.1.1 and uv 0.10.0 cases and current source for Poetry 2.5.1 and pipgrip.
+
+Key refinements from the experiment:
+
+1. Candidate completeness is per candidate-domain/query, not trace-global.
+2. Complete coverage must be tied to an explicit source/index/query scope and an exhaustion attestation.
+3. A generic resolver-exhaustion assertion cannot independently prove external source exhaustion.
+4. Candidate identity is opaque and source-aware; package/version is not always unique.
+5. Artifact is a distinct entity from candidate where wheel/source artifact selection affects installability.
+6. Runtime context is separate from resolution policy, especially for prerelease and universal/forked resolution.
+7. Rejection records require reason kind and source layer and do not imply exhaustive rejection.
+8. Native incompatibility/derivation structures remain namespaced; only semantic literals and provenance are normalized.
+9. Missing metadata from the capture remains insufficient_evidence; an actually observed invalid artifact can be a known rejection.
+
+Targeted contract test result: **8/8 checks passed**.
+
+The revised schema is defined in research/REVISED_TRACE_SCHEMA.md.
