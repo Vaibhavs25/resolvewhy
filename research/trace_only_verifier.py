@@ -1,15 +1,23 @@
 import copy, json, os, subprocess, sys, tempfile
+from pathlib import Path
 
 OPS = {'==':lambda a,b:a==b,'!=':lambda a,b:a!=b,'<':lambda a,b:a<b,'<=':lambda a,b:a<=b,'>':lambda a,b:a>b,'>=':lambda a,b:a>=b}
 def ver(v): return tuple(int(x) for x in v.split('.'))
 def satv(v, op, rhs): return OPS[op](ver(v),ver(rhs))
 
 def structural(t):
-    required=['schema','trace_scope','requirements','candidates','artifacts','dependencies','runtime_contexts','evaluation_domain','resolution_policy','candidate_domains','semantic_constraints','provenance','evidence_state']
+    required=['schema','trace_scope','requirements','candidates','artifacts','dependencies','runtime_contexts','evaluation_domain','resolution_policy','candidate_domains','semantic_constraints','provenance','evidence_state','proof_claim']
     missing=[x for x in required if x not in t]
     if missing: return False,'missing required fields: '+','.join(missing)
     if t['trace_scope'] not in {'existential','universal','branch'}: return False,'invalid trace scope'
     if not isinstance(t['evaluation_domain'],list) or not t['evaluation_domain']: return False,'invalid evaluation domain'
+    claim=t['proof_claim']
+    if not isinstance(claim,dict): return False,'invalid proof claim'
+    if claim.get('kind')!='satisfiability': return False,'invalid proof claim kind'
+    if claim.get('quantifier') not in {'existential','universal','branch'}: return False,'invalid proof claim quantifier'
+    if claim.get('evaluation_domain_ref')!='evaluation_domain': return False,'proof claim does not bind evaluation domain'
+    if claim.get('status_claim') not in {'SAT','UNSAT'}: return False,'invalid proof claim result'
+    if not isinstance(claim.get('premise_refs'),list) or not claim.get('premise_refs'): return False,'proof claim lacks premises'
     ids=[c.get('id') for c in t['candidates']]
     if any(x is None for x in ids) or len(ids)!=len(set(ids)): return False,'invalid candidate IDs'
     aids=[a.get('id') for a in t['artifacts']]
@@ -88,6 +96,7 @@ def base_trace():
       'semantic_constraints':[{'id':'c:root','kind':'requirement','source_ref':'root:a'},{'id':'c:dep','kind':'dependency','source_ref':'dep:a-x'}],
       'provenance':[{'id':'p:root','premise_refs':['root:a'],'claim':'root requirement'},{'id':'p:dep','premise_refs':['dep:a-x'],'claim':'dependency metadata'},{'id':'p:domain','premise_refs':['obs:x'],'claim':'candidate domain complete'}],
       'evidence_state':{'overall':'known'},
+      'proof_claim':{'id':'claim:1','kind':'satisfiability','quantifier':'universal','evaluation_domain_ref':'evaluation_domain','status_claim':'UNSAT','premise_refs':['c:root','c:dep']},
       'claimed_core':['c:root','c:dep']
     }
 
