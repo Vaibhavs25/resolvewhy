@@ -203,6 +203,11 @@ class DependencyEdge:
     evidence_refs: tuple[TraceRef, ...] = ()
     source_namespace: str | None = None
 
+    def __post_init__(self) -> None:
+        _required(str(self.id), "DependencyEdge.id")
+        _required(str(self.parent_candidate_ref), "DependencyEdge.parent_candidate_ref")
+        _required(str(self.requirement_ref), "DependencyEdge.requirement_ref")
+
 
 @dataclass(frozen=True)
 class Candidate:
@@ -232,6 +237,10 @@ class Artifact:
     compatible: bool | None = None
     selection_status: ArtifactSelectionStatus = ArtifactSelectionStatus.UNKNOWN
     evidence_refs: tuple[TraceRef, ...] = ()
+
+    def __post_init__(self) -> None:
+        _required(str(self.id), "Artifact.id")
+        _required(str(self.candidate_ref), "Artifact.candidate_ref")
 
 
 @dataclass(frozen=True)
@@ -264,6 +273,8 @@ class EvaluationDomain:
         _required(str(self.id), "EvaluationDomain.id")
         if not self.environment_refs:
             raise ValueError("EvaluationDomain.environment_refs must not be empty")
+        if len(set(self.environment_refs)) != len(self.environment_refs):
+            raise ValueError("EvaluationDomain.environment_refs must be unique")
         if self.kind is EvaluationDomainKind.SINGLETON_ENVIRONMENT and len(self.environment_refs) != 1:
             raise ValueError("singleton evaluation domains require exactly one environment")
 
@@ -280,12 +291,25 @@ class ResolutionPolicy:
     cutoff_exclusions: tuple[str, ...] = ()
     lockfile_preferences: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        _required(str(self.id), "ResolutionPolicy.id")
+        if self.prerelease_mode not in {"allow", "disallow", "only", "unspecified"}:
+            raise ValueError("ResolutionPolicy.prerelease_mode is invalid")
+        if self.universal_strategy not in {"single", "universal", "fork", "unspecified"}:
+            raise ValueError("ResolutionPolicy.universal_strategy is invalid")
+
 
 @dataclass(frozen=True)
 class CandidateDomainScope:
     sources: tuple[str, ...] = ()
     queries: tuple[str, ...] = ()
     artifact_policy_ref: PolicyId | None = None
+
+    def __post_init__(self) -> None:
+        if any(not isinstance(value, str) or not value.strip() for value in self.sources):
+            raise ValueError("CandidateDomainScope.sources cannot contain empty values")
+        if any(not isinstance(value, str) or not value.strip() for value in self.queries):
+            raise ValueError("CandidateDomainScope.queries cannot contain empty values")
 
 
 @dataclass(frozen=True)
@@ -319,6 +343,12 @@ class CandidateDomain:
     def __post_init__(self) -> None:
         _required(str(self.id), "CandidateDomain.id")
         _required(self.identifier, "CandidateDomain.identifier")
+        _required(str(self.runtime_context_ref), "CandidateDomain.runtime_context_ref")
+        _required(str(self.resolution_policy_ref), "CandidateDomain.resolution_policy_ref")
+        if len(set(self.requirement_refs)) != len(self.requirement_refs):
+            raise ValueError("CandidateDomain.requirement_refs must be unique")
+        if len(set(self.candidate_refs)) != len(self.candidate_refs):
+            raise ValueError("CandidateDomain.candidate_refs must be unique")
 
 
 @dataclass(frozen=True)
@@ -397,6 +427,10 @@ class EvidenceState:
     overall: EvidenceStateKind
     observations: tuple[EvidenceObservation, ...] = ()
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.overall, EvidenceStateKind):
+            raise ValueError("EvidenceState.overall is invalid")
+
 
 @dataclass(frozen=True)
 class ProvenanceRecord:
@@ -439,8 +473,14 @@ class ProofClaim:
             raise ValueError("branch proofs require branch_ref")
         if self.quantifier is not ProofQuantifier.BRANCH and self.branch_ref is not None:
             raise ValueError("only branch proofs may set branch_ref")
+        if self.subset_minimal_claim and self.status_claim is not ProofStatus.UNSAT:
+            raise ValueError("subset_minimal_claim is only valid for an UNSAT claim")
         if self.subset_minimal_claim and not self.claimed_core_refs:
             raise ValueError("subset_minimal_claim requires claimed_core_refs")
+        if len(set(self.premise_refs)) != len(self.premise_refs):
+            raise ValueError("ProofClaim.premise_refs must be unique")
+        if len(set(self.claimed_core_refs)) != len(self.claimed_core_refs):
+            raise ValueError("ProofClaim.claimed_core_refs must be unique")
 
 
 @dataclass(frozen=True)
