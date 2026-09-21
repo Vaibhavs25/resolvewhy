@@ -104,8 +104,6 @@ def run():
     must("minimality",ok and all(x[1]=="VERIFIED_SAT" for x in deletions))
     must("claim disagreement recomputed",v["verify"]({**base,"proof_claim":{**base["proof_claim"],"status_claim":"SAT"}})[0]=="VERIFIED_UNSAT")
     self_tests=run_self_tests(v,c)
-    artifact=copy.deepcopy(base); artifact["artifacts"][0]["compatible"]=False
-    must("artifact feasibility",v["verify"](artifact)[0] in {"VERIFIED_SAT","VERIFIED_UNSAT"})
     bad_prov=copy.deepcopy(base); bad_prov["provenance"][0]["evidence_refs"]=["unrelated"]
     must("unrelated provenance",v["verify"](bad_prov)[0]=="INVALID_TRACE")
     cycle=copy.deepcopy(base)
@@ -123,6 +121,8 @@ def run():
     branch["proof_claim"]["branch_ref"]="py3.13-linux"
     # Branch claims are tested explicitly; the selected branch is evaluated directly.
     must("branch",v["verify"](branch)[0] in {"VERIFIED_SAT","VERIFIED_UNSAT"})
+    artifact=copy.deepcopy(base); artifact["artifacts"][0]["compatible"]=False
+    must("artifact feasibility",v["verify"](artifact)[0] == "VERIFIED_UNSAT")
     worlds,raw,repaired,_=c["collision_search"]()
     must("256 worlds",worlds==256); must("post repair zero",repaired==0); must("native deletion",c["native_deletion_check"]())
     with tempfile.TemporaryDirectory() as td:
