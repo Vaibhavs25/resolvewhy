@@ -10,6 +10,7 @@ from .capture import (
     RecordingReporter,
 )
 from .normalize import AdapterContext, SemanticAccessors, normalize_capture
+from resolvewhy.model import Trace
 
 RT = TypeVar("RT")
 CT = TypeVar("CT")
@@ -21,7 +22,7 @@ class AdapterExecutionError(RuntimeError):
 
 @dataclass(frozen=True)
 class AdapterResult(Generic[RT, CT]):
-    trace: Any
+    trace: Trace
     resolver_result: object | None
     native_error_type: str | None
     native_status_claim: str
@@ -192,14 +193,14 @@ class PipResolvelibAdapter(Generic[RT, CT]):
             native_error=None,
         )
 
-    def normalize(self, captured: CapturedRun[RT, CT]):
+    def normalize(self, captured: CapturedRun[RT, CT]) -> Trace:
         return normalize_capture(
             captured,
             context=self.context,
             semantics=self.semantics,
         )
 
-    def build_trace(self, captured: CapturedRun[RT, CT]):
+    def build_trace(self, captured: CapturedRun[RT, CT]) -> Trace:
         return self.normalize(captured)
 
     def resolve(
