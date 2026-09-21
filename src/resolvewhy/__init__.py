@@ -1,6 +1,7 @@
 """Foundation package for the resolvewhy dependency-resolution proof system."""
 
 from .model import *
+from .trace import *
 from .validation import (
     TraceValidationError,
     ValidationIssue,
