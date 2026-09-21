@@ -100,3 +100,21 @@ Technical findings:
 - **H2e:** **NOT TESTED**; there are still **0 substantive maintainer responses**.
 
 The real-world result therefore strengthens technical feasibility evidence without changing the separate maintainer-validation gate.
+
+
+## H2d cross-resolver portability validation — 2026-09-21
+
+A direct portability experiment compared minimal semantic mappings from pip/resolvelib and uv, with source-level mappings for Poetry/Mixology and pipgrip/PubGrub.
+
+Result:
+- **H2d: PARTIALLY SUPPORTED — PORTABILITY BOUNDARY MUST BE NARROWED.**
+- The tested resolver pair can preserve the same satisfiability-relevant semantic facts for requirements, dependency edges, activation conditions, opaque candidate identity, artifact identity, runtime context, policy, candidate-domain coverage, semantic constraints, provenance, and evidence state.
+- Native incompatibility/rejection objects, derivation trees, decision levels, backjump state, provider internals, index machinery, and human-readable diagnostics do not have one safely universal meaning and remain namespaced/optional.
+- The known uv conditional-marker case successfully serves as an unsafe-normalization attack: erasing the marker and promoting the native conflict to a universal clause is rejected by the semantic proof boundary.
+- No tested semantic concept was forced into NOT REPRESENTABLE.
+
+This is technical portability evidence for the tested resolver pair and cases. It does not establish ecosystem-wide interchange or API stability.
+
+### H2e remains separate
+
+**H2e: NOT TESTED.** The cross-resolver experiment provides no maintainer feedback and does not alter the 0 substantive-response status.
