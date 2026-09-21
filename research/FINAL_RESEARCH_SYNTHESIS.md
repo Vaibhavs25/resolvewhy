@@ -268,3 +268,11 @@ H2e is **NOT TESTED**. The repository contains no substantive maintainer feedbac
 **MAINTAINER VALIDATION REMAINS OPEN.**
 
 **PRODUCTION IMPLEMENTATION REMAINS A SEPARATE FUTURE DECISION.**
+
+## Final reproducibility alignment addendum — 2026-09-21
+
+The executable boundary is now explicit and matches the committed research harnesses. `research/run_reproducibility.py` regenerates the finite verifier checks, exactly 250 distinct deterministic mutation cases, and the extended 256-world projection search. The historical 18/18 trace-only corpus result remains a serialized research-record replay rather than a fresh live execution of every historical resolver incident.
+
+The committed verifier is a fixture-level implementation of the tested executable fragment: normalized version constraints, explicit dependency activation, the tested Requires-Python rule, finite proof quantification including an explicit branch selector, candidate coverage/attestation, proof-premise selection, provenance reachability, artifact-reference/compatibility checks, and the fixed executable policy contract. It does not implement general PEP 508, full build/wheel selection, complete lockfile semantics, or general resolver policy semantics.
+
+A local `git clone` and execution could not be performed in this environment because external DNS/network access was unavailable. This is an environment limitation, not a claim about the repository's ability to run when cloned in a normal Python 3 environment. The GitHub repository contents were inspected and updated through the repository connector.
