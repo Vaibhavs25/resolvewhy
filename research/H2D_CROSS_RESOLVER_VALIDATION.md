@@ -326,3 +326,60 @@ The narrower interpretation survives:
 This supports H2d for the tested pip/resolvelib–uv pair and cases, but it does not establish general cross-ecosystem portability.
 
 H2e is unchanged and remains NOT TESTED.
+
+
+## Portable-core sufficiency falsification — 2026-09-21
+
+The next experiment attacked the current portable semantic core directly using a finite projection-collision search.
+
+### Result
+
+A genuine projection collision was found for **universal/forked resolution scope**.
+
+Two worlds had identical current portable-core projections:
+
+- same requirements;
+- same dependency edge and activation condition;
+- same candidate and Requires-Python metadata;
+- same runtime context (active Python 3.13/Linux);
+- same universal resolution policy flag;
+- same candidate coverage and provenance/evidence state;
+- different hidden declared evaluation domains.
+
+World A evaluated only `{Python 3.13/Linux}` and was satisfiable.
+World B claimed support for `{Python 3.13/Linux, Python 3.9/Linux}` while the only `numba==0.61` candidate required Python `>=3.10`; the universal claim was therefore unsatisfiable.
+
+The current portable core could not distinguish those worlds because it contained the active `runtime_context` and `universal/fork` policy but no explicit proof/evaluation domain.
+
+Automated search result:
+- 64 native fixture worlds generated across pip-style and uv-style native evidence shapes;
+- 2 raw projection collisions corresponding to the same unique semantic collision family;
+- 0 collisions after adding an explicit evaluation domain to the projection;
+- native derivation/decision-state deletion left the semantic truth unchanged in the tested fragment.
+
+### Smallest repair
+
+Add an explicit portable semantic concept:
+
+`evaluation_domain`
+
+It is distinct from:
+- `runtime_context` — the environment that produced a particular observation;
+- `resolution_policy` — how the resolver is instructed to solve;
+- `candidate-domain coverage` — what candidates were exhaustively observed inside a query domain.
+
+For universal/forked claims, `evaluation_domain` must identify the set or partition of environments over which the satisfiability claim is quantified.
+
+### Re-run after repair
+
+The repaired projection distinguished the SAT and UNSAT worlds, and the finite collision search found **0 projection collisions**.
+
+No change was made to the resolver-native namespace rule: native incompatibilities, derivation trees, decision levels, and backjump state remain non-portable implementation evidence.
+
+### H2d consequence
+
+This finding is stronger than the previous portability result. It demonstrates that the earlier portable-core boundary was incomplete for quantified multi-environment claims. The common semantic layer remains viable, but its proven scope must include explicit evaluation/proof domain semantics.
+
+The H2d decision therefore remains:
+
+**B. H2d PARTIALLY SUPPORTED — PORTABILITY BOUNDARY MUST BE NARROWED.**
