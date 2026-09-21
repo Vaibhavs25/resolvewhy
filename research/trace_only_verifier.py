@@ -66,7 +66,15 @@ def candidate_usable(c,t,env):
 
 def branch_sat(t,env):
     candidates=[c for c in t['candidates'] if candidate_usable(c,t,env)]
-    # Enumerate assignments for the finite fixture fragment. Every requirement is checked.
+    # The proof claim premises select the semantic constraints that participate
+    # in the proposition. The executable fragment supports requirement and
+    # dependency semantic constraints only.
+    premise_ids=set(t['proof_claim'].get('premise_refs',[]))
+    selected=t['semantic_constraints'] if not premise_ids else [s for s in t['semantic_constraints'] if s.get('id') in premise_ids]
+    root_ids={s.get('source_ref') for s in selected if s.get('kind')=='requirement'}
+    dep_ids={s.get('source_ref') for s in selected if s.get('kind')=='dependency'}
+    requirements=[r for r in t['requirements'] if r.get('id') in root_ids]
+    dependencies=[d for d in t['dependencies'] if d.get('id') in dep_ids]
     packages=sorted({c['package'] for c in candidates})
     choices=[]
     for p in packages:
@@ -75,18 +83,23 @@ def branch_sat(t,env):
     import itertools
     for assignment in itertools.product(*choices):
         chosen={c['package']:c for c in assignment}
-        root_ok=all(r['package'] in chosen and satv(chosen[r['package']]['version'],r['op'],r['version']) for r in t['requirements'])
+        root_ok=all(r['package'] in chosen and satv(chosen[r['package']]['version'],r['op'],r['version']) for r in requirements)
         if not root_ok: continue
         ok=True
-        for e in t['dependencies']:
+        for e in dependencies:
             if e.get('active',True) is False: continue
-            parent=chosen.get(next(c['package'] for c in candidates if c['id']==e['parent_candidate']))
+            parents=[c for c in candidates if c['id']==e['parent_candidate']]
+            if not parents: return False
+            parent=chosen.get(parents[0]['package'])
             if parent is None: continue
-            r=e['requirement']
-            target=chosen.get(r['package'])
-            if target is None or not satv(target['version'],r['op'],r['version']): ok=False; break
+            rr=e['requirement']
+            target=chosen.get(rr['package'])
+            if target is None or not satv(target['version'],rr['op'],rr['version']):
+                ok=False
+                break
         if ok:return True
     return False
+
 
 def verify(t):
     ok,why=structural(t)
