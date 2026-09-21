@@ -83,7 +83,11 @@ def run():
     must("minimality",ok and all(x[1]=="VERIFIED_SAT" for x in deletions))
     must("claim disagreement recomputed",v["verify"]({**base,"proof_claim":{**base["proof_claim"],"status_claim":"SAT"}})[0]=="VERIFIED_UNSAT")
     mutation_cases,false_accepts=mutate_campaign(v)
-    branch=copy.deepcopy(base); branch["trace_scope"]="branch"; branch["proof_claim"]["quantifier"]="branch"; branch["proof_claim"]["branch_ref"]="py3.13-linux"
+    branch=copy.deepcopy(base)
+    branch["trace_scope"]="branch"
+    branch["proof_claim"]["quantifier"]="branch"
+    branch["proof_claim"]["branch_ref"]="py3.13-linux"
+    # Branch claims are tested explicitly; the selected branch is evaluated directly.
     must("branch",v["verify"](branch)[0] in {"VERIFIED_SAT","VERIFIED_UNSAT"})
     worlds,raw,repaired,_=c["collision_search"]()
     must("256 worlds",worlds==256); must("post repair zero",repaired==0); must("native deletion",c["native_deletion_check"]())
