@@ -84,3 +84,8 @@ Several native fields do have non-identical meanings across resolver families. T
 The matrix therefore supports **partial H2d portability** with an explicit evaluation-domain boundary for multi-environment claims. It does not support universal interchange.
 
 **H2e remains separate and unchanged: NOT TESTED.**
+
+## Stable references
+
+- https://github.com/sarugaku/resolvelib/blob/main/src/resolvelib/providers.py
+- https://docs.astral.sh/uv/reference/internals/resolver/
