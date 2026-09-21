@@ -200,7 +200,21 @@ The RW-07 attack demonstrates that activation conditions remain proof-relevant:
 
 RW-02 remains the resolver-failure-but-SAT negative control. Resolver labels such as ResolutionImpossible or No solution found are not proof premises.
 
-### Serialization fuzzing and projection collision
+### Reproducibility status
+
+The historical full-corpus results in this document are retained as research evidence. The current clean executable runner does not recreate all 18 serialized fixtures; it therefore treats the 18/18 result as historical rather than as freshly regenerated output.
+
+The current runner independently regenerates:
+- the finite committed verifier fixture;
+- serialization round-trip for that fixture;
+- hermetic replay for that fixture;
+- subset-minimality for that fixture;
+- 250 deterministic mutation cases;
+- the current 64-world projection harness.
+
+The broader 18-case corpus and 256-world extended search remain documented research records and are linked through `research/REPRODUCIBILITY_INDEX.md`.
+
+## Serialization fuzzing and projection collision
 
 A deterministic structural campaign executed 250 serialized mutations with **0 incorrectly accepted verified proofs**.
 
