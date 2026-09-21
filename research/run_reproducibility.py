@@ -39,7 +39,8 @@ def mutation_campaign(v):
         "dependency_references", "proof_premises", "evidence_states",
     ]
     results = []
-    for i in range(250):
+    n_variants = 23  # 11*22=242 plus eight deterministic extras below.
+    for i in range(242):
         case = copy.deepcopy(base)
         fam = taxonomy[i % len(taxonomy)]
         variant = i // len(taxonomy)
@@ -71,6 +72,22 @@ def mutation_campaign(v):
             case["evidence_state"]["overall"] = ["unknown", "incomplete", "missing"][variant % 3]
         raw = json.dumps(case, sort_keys=True, separators=(",", ":"))
         results.append((i, fam, raw, v["verify"](case)[0]))
+    extras = []
+    for j in range(8):
+        case = copy.deepcopy(base)
+        mode = j % 4
+        if mode == 0:
+            case["proof_claim"]["premise_refs"] = ["c:missing"]
+        elif mode == 1:
+            case["proof_claim"]["evaluation_domain_ref"] = f"missing-domain-{j}"
+        elif mode == 2:
+            case["trace_scope"] = "universal"
+            case["proof_claim"]["quantifier"] = "existential"
+        else:
+            case["candidate_domains"][0]["coverage"]["attestation"]["evidence_refs"] = [f"missing-extra-{j}"]
+        raw = json.dumps(case, sort_keys=True, separators=(",", ":"))
+        extras.append((242+j, "targeted", raw, v["verify"](case)[0]))
+    results.extend(extras)
     require("250 distinct mutation instances", len({x[2] for x in results}) == 250)
     false_accepts = sum(r[3] in {"VERIFIED_SAT", "VERIFIED_UNSAT"} for r in results)
     require("zero mutation false accepts", false_accepts == 0)
