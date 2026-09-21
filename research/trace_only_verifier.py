@@ -55,6 +55,11 @@ def structural(t):
                 if ref in evidence_refs or ref in {d.get('id') for d in t['dependencies']} or ref in {r.get('id') for r in t['requirements']}:
                     linked=True
         if not linked: return False,'proof premise provenance lacks in-scope evidence'
+    # Every claimed premise must participate in the checked semantic problem.
+    used_sources={sc.get('source_ref') for sc in t['semantic_constraints'] if isinstance(sc,dict)}
+    for sid in claimed:
+        sc=next(sc for sc in t['semantic_constraints'] if sc.get('id')==sid)
+        if sc.get('source_ref') not in used_sources: return False,'proof premise is not semantically connected'
     return True,'ok'
 
 def candidate_usable(c,t,env):
