@@ -93,6 +93,11 @@ def run_self_tests(v, c):
     record("artifact feasibility", v["verify"](artifact)[0]=="VERIFIED_UNSAT")
     return checks
 
+def summarize(verdicts):
+    from collections import Counter
+    return dict(Counter(verdicts))
+
+
 def run():
     v=load(VERIFIER); c=load(COLLISION)
     base=v["base_trace"]()
@@ -140,5 +145,6 @@ def run():
     print(f"PROJECTION_WORLDS = {worlds}")
     print(f"POST_REPAIR_COLLISIONS = {repaired}")
     print(f"RAW_PRE_REPAIR_COLLISIONS = {raw}")
+    print(f"SELF_TESTS = {len(self_tests)}/{len(self_tests)}")
 if __name__=="__main__":
     run()
