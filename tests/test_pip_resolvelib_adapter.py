@@ -242,6 +242,32 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertFalse(view.complete)
         self.assertTrue(view.unsupported_reasons)
 
+    def test_observable_direct_url_candidate_is_not_registry_identity(self):
+        @dataclass(frozen=True)
+        class DirectLink:
+            url: str
+            comes_from: str | None = None
+            is_vcs: bool = False
+            is_file: bool = False
+            hashes: dict[str, str] | None = None
+            yanked_reason: str | None = None
+
+        @dataclass(frozen=True)
+        class LinkCandidate:
+            project_name: str
+            version: Version
+            source_link: DirectLink
+
+        view = DefaultPipSemantics().candidate_view(
+            LinkCandidate(
+                "pkg",
+                Version("1.0"),
+                DirectLink("https://downloads.example/pkg-1.0.tar.gz"),
+            )
+        )
+        self.assertEqual(view.kind.value, "direct_url")
+        self.assertEqual(view.origin, "https://downloads.example/pkg-1.0.tar.gz")
+
     def test_source_distinct_candidates_remain_distinct(self):
         @dataclass(frozen=True)
         class FakeLink:
