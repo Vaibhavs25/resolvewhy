@@ -17,6 +17,7 @@ The executable suite currently regenerates:
 - serialization round-trip for that fixture;
 - hermetic child-process replay for that fixture;
 - subset-minimality checks for that fixture;
+- explicit structural self-tests;
 - exactly 250 deterministic structural mutations;
 - the 256-world extended projection-search harness.
 
