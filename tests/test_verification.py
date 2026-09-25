@@ -1128,7 +1128,7 @@ class ProductionVerifierTests(unittest.TestCase):
     def test_compound_constraints_are_conjunctive(self):
         ctx = _ctx()
         c1 = _candidate("pkg", "2.0")
-        c2 = _candidate("pkg", "4.0")
+        c2 = _candidate("pkg", "4.0", "2")
         req = _req("pkg", ">=", "1.0")
         c = _constraint(
             "c:compound", SemanticConstraintKind.REQUIREMENT,
