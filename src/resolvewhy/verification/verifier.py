@@ -318,23 +318,29 @@ def _validate_candidate_coverage(
                                 ),
                             ),
                         )
-                    if (
-                        domain.scope.sources
-                        and candidate.source_ref is not None
-                        and candidate.source_ref not in domain.scope.sources
-                    ):
-                        return _invalid(
-                            trace,
-                            (
-                                _issue(
-                                    "invalid_coverage_scope",
-                                    (
-                                        f"candidate {candidate.id} is outside the "
-                                        f"declared source scope of domain {domain.id}"
+                    if domain.scope.sources:
+                        if candidate.source_ref is None:
+                            return _insufficient(
+                                trace,
+                                reason="incomplete_candidate_metadata",
+                                message=(
+                                    f"candidate {candidate.id} has no source identity "
+                                    f"for scoped domain {domain.id}"
+                                ),
+                            )
+                        if candidate.source_ref not in domain.scope.sources:
+                            return _invalid(
+                                trace,
+                                (
+                                    _issue(
+                                        "invalid_coverage_scope",
+                                        (
+                                            f"candidate {candidate.id} is outside the "
+                                            f"declared source scope of domain {domain.id}"
+                                        ),
                                     ),
                                 ),
-                            ),
-                        )
+                            )
     return None
 
 
