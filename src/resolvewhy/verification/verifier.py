@@ -468,10 +468,8 @@ def _evaluate(
             if (
                 exc.code.startswith("unsupported_")
                 or exc.code.startswith("incomplete_")
-                or exc.code in {
-                    "evaluation_search_limit",
-                    "unknown_artifact_compatibility",
-                }
+                or exc.code.startswith("unknown_")
+                or exc.code.startswith("evaluation_")
             ):
                 return (
                     tuple(results),
@@ -677,25 +675,35 @@ def verify(trace: Trace) -> VerificationResult:
     ):
         reasons.append("claim_mismatch")
 
+    core_ids = tuple(str(item) for item in claim.claimed_core_refs)
+    core_verified: bool | None = None
+    if core_ids:
+        core_verified = _core_verification(
+            trace,
+            premises,
+            core_ids,
+            active_contexts,
+        )
+        if not core_verified:
+            reasons.append("core_not_verified")
+
     minimality_verified: bool | None = None
     if claim.subset_minimal_claim:
         minimality_verified = _minimality(
             trace,
             premises,
-            tuple(claim.claimed_core_refs),
+            core_ids,
             active_contexts,
         )
         if not minimality_verified:
             reasons.append("minimality_not_verified")
-    elif claim.claimed_core_refs:
-        minimality_verified = None
 
-    core_ids = tuple(str(item) for item in claim.claimed_core_refs)
     return _base_result(
         trace,
         status=status,
         reasons=tuple(reasons),
         core_ids=core_ids,
+        core_verified=core_verified,
         minimality_verified=minimality_verified,
         branch_results=tuple(result.value for result in branch_outcomes),
         independently_verified=True,
