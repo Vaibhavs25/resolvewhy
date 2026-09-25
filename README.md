@@ -19,7 +19,7 @@ Research prototype for formally verified explanations of dependency-resolution f
 
 **Phase 4A — Production Independent Verifier:** implemented for the declared finite semantic fragment. The verifier independently reconstructs and evaluates production `resolvewhy-trace/1.0` traces and returns typed `VERIFIED_SAT`, `VERIFIED_UNSAT`, `INSUFFICIENT_EVIDENCE`, or `INVALID_TRACE` results. It does not import the research verifier or depend on a resolver.
 
-Phase 4A does not imply general production readiness. Unsupported semantics continue to fail closed, and the project has not started Phase 4B, the explanation layer, CLI/API, or additional resolver adapters.
+Phase 4B — Independent Solver + Minimal-Core Engine: implemented and tested for the established finite semantic fragment. The reusable solver operates on a typed semantic problem, independently computes SAT/UNSAT, and provides deterministic subset-minimal core extraction and core verification. Phase 4B does not imply general production readiness. Unsupported semantics continue to fail closed, and the explanation layer, CLI/API, and additional resolver adapters remain future work.
 
 See `docs/PRODUCTION_SEMANTIC_CORE.md`, `docs/PRODUCTION_TRACE_FORMAT.md`, `docs/PRODUCTION_VERIFIER.md`, and `AI_BUILD_CONTEXT.md`.
 

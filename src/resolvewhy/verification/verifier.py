@@ -15,16 +15,15 @@ from resolvewhy.trace import SCHEMA, TraceDecodeError, deserialize_trace
 from resolvewhy.validation import validate_trace
 
 from .result import VerificationIssue, VerificationResult
-from .semantics import (
-    BranchOutcome,
+from resolvewhy.solving.semantics import (
     SemanticGap,
-    EvaluationLimit,
-    _candidate_domain_map,
     _constraint_packages,
     _constraint_source,
     _validate_constraint_shape,
-    evaluate_branch,
 )
+from resolvewhy.solving.problem import SemanticProblem
+from resolvewhy.solving.solver import SolveStatus, solve
+from resolvewhy.solving.core import verify_unsat_core
 
 
 _BLOCKING_EVIDENCE = {
@@ -452,116 +451,6 @@ def _validate_semantics(
     return None
 
 
-def _evaluate(
-    trace: Trace,
-    constraints,
-    contexts,
-) -> tuple[tuple[BranchOutcome, ...], VerificationResult | None]:
-    results: list[BranchOutcome] = []
-    for context in contexts:
-        try:
-            outcome = evaluate_branch(trace, constraints, context)
-        except EvaluationLimit as exc:
-            return (
-                tuple(results),
-                _insufficient(
-                    trace,
-                    reason=exc.code,
-                    message=str(exc),
-                ),
-            )
-        except SemanticGap as exc:
-            if (
-                exc.code.startswith("unsupported_")
-                or exc.code.startswith("incomplete_")
-                or exc.code.startswith("unknown_")
-                or exc.code.startswith("evaluation_")
-            ):
-                return (
-                    tuple(results),
-                    _insufficient(
-                        trace,
-                        reason=exc.code,
-                        message=str(exc),
-                    ),
-                )
-            return (
-                tuple(results),
-                _invalid(
-                    trace,
-                    (_issue(exc.code, str(exc)),),
-                ),
-            )
-        results.append(outcome)
-    return tuple(results), None
-
-
-def _combine(
-    quantifier: ProofQuantifier,
-    results: tuple[BranchOutcome, ...],
-) -> BranchOutcome:
-    if quantifier is ProofQuantifier.EXISTENTIAL:
-        if any(result is BranchOutcome.SAT for result in results):
-            return BranchOutcome.SAT
-        if any(result is BranchOutcome.UNKNOWN for result in results):
-            return BranchOutcome.UNKNOWN
-        return BranchOutcome.UNSAT
-    if quantifier is ProofQuantifier.UNIVERSAL:
-        if any(result is BranchOutcome.UNSAT for result in results):
-            return BranchOutcome.UNSAT
-        if any(result is BranchOutcome.UNKNOWN for result in results):
-            return BranchOutcome.UNKNOWN
-        return BranchOutcome.SAT
-    if len(results) != 1:
-        raise ValueError("branch quantifier must select exactly one environment")
-    return results[0]
-
-
-def _core_verification(
-    trace: Trace,
-    premise_constraints,
-    core_ids: tuple[str, ...],
-    contexts,
-) -> bool:
-    if not core_ids:
-        return False
-    by_id = {str(constraint.id): constraint for constraint in premise_constraints}
-    try:
-        core = tuple(by_id[item] for item in core_ids)
-    except KeyError:
-        return False
-    results, error = _evaluate(trace, core, contexts)
-    if error is not None:
-        return False
-    return _combine(trace.proof_claim.quantifier, results) is BranchOutcome.UNSAT
-
-
-def _minimality(
-    trace: Trace,
-    premise_constraints,
-    core_ids: tuple[str, ...],
-    contexts,
-) -> bool:
-    if not _core_verification(trace, premise_constraints, core_ids, contexts):
-        return False
-
-    by_id = {str(constraint.id): constraint for constraint in premise_constraints}
-    core = tuple(by_id[item] for item in core_ids)
-
-    for removed in core_ids:
-        reduced = tuple(item for item in core if str(item.id) != removed)
-        if not reduced:
-            deletion_outcome = BranchOutcome.SAT
-        else:
-            results, error = _evaluate(trace, reduced, contexts)
-            if error is not None:
-                return False
-            deletion_outcome = _combine(trace.proof_claim.quantifier, results)
-        if deletion_outcome is not BranchOutcome.SAT:
-            return False
-    return True
-
-
 def verify(trace: Trace) -> VerificationResult:
     if not isinstance(trace, Trace):
         raise TypeError("verify expects a resolvewhy.model.Trace")
@@ -657,21 +546,31 @@ def verify(trace: Trace) -> VerificationResult:
             ),
         )
 
-    branch_outcomes, evaluation_error = _evaluate(trace, premises, active_contexts)
-    if evaluation_error is not None:
-        return evaluation_error
-
-    combined = _combine(claim.quantifier, branch_outcomes)
-    if combined is BranchOutcome.UNKNOWN:
+    problem = SemanticProblem.from_trace(
+        trace,
+        premises,
+        active_contexts,
+        claim.quantifier,
+    )
+    solve_result = solve(problem)
+    if solve_result.status is SolveStatus.INVALID_PROBLEM:
+        return _invalid(
+            trace,
+            (_issue(
+                solve_result.reason or "invalid_semantic_problem",
+                solve_result.message or "semantic problem is invalid",
+            ),),
+        )
+    if solve_result.status is SolveStatus.INSUFFICIENT_EVIDENCE:
         return _insufficient(
             trace,
-            reason="insufficient_semantic_evidence",
-            message="the represented proposition cannot be decided from the supported fragment",
+            reason=solve_result.reason or "insufficient_semantic_evidence",
+            message=solve_result.message or "the represented proposition cannot be decided from the supported fragment",
         )
 
     status = (
         VerificationStatus.VERIFIED_SAT
-        if combined is BranchOutcome.SAT
+        if solve_result.status is SolveStatus.SAT
         else VerificationStatus.VERIFIED_UNSAT
     )
     reasons: list[str] = []
@@ -684,23 +583,15 @@ def verify(trace: Trace) -> VerificationResult:
     core_ids = tuple(str(item) for item in claim.claimed_core_refs)
     core_verified: bool | None = None
     if core_ids:
-        core_verified = _core_verification(
-            trace,
-            premises,
-            core_ids,
-            active_contexts,
-        )
+        core_check = verify_unsat_core(problem, core_ids)
+        core_verified = core_check.verified
         if not core_verified:
             reasons.append("core_not_verified")
 
     minimality_verified: bool | None = None
     if claim.subset_minimal_claim:
-        minimality_verified = _minimality(
-            trace,
-            premises,
-            core_ids,
-            active_contexts,
-        )
+        core_check = verify_unsat_core(problem, core_ids)
+        minimality_verified = core_check.verified
         if not minimality_verified:
             reasons.append("minimality_not_verified")
 
@@ -711,7 +602,7 @@ def verify(trace: Trace) -> VerificationResult:
         core_ids=core_ids,
         core_verified=core_verified,
         minimality_verified=minimality_verified,
-        branch_results=tuple(result.value for result in branch_outcomes),
+        branch_results=tuple(result.value for result in solve_result.branch_results),
         independently_verified=True,
     )
 

@@ -54,11 +54,11 @@ Verification proceeds in this order:
 6. Check evaluation-domain and branch binding.
 7. Validate supported semantic constraint shapes.
 8. Validate provenance and detect cycles.
-9. Reconstruct the finite semantic proposition for each applicable runtime context.
-10. Independently evaluate SAT/UNSAT.
+9. Reconstruct a typed `SemanticProblem` from the validated trace evidence and proof premises.
+10. Delegate SAT/UNSAT evaluation to the reusable production solver.
 11. Compare the independent result with status_claim without trusting the claim.
-12. Independently verify a claimed core, when present.
-13. Independently verify subset-minimality when subset_minimal_claim is set.
+12. Delegate claimed-core verification to the reusable core checker.
+13. Delegate subset-minimality verification to the reusable core checker when subset_minimal_claim is set.
 14. Return a structured VerificationResult.
 
 Malformed references and inconsistent proof bindings are INVALID_TRACE.
@@ -337,3 +337,28 @@ The following are intentionally not included:
 - additional resolver adapters.
 
 Production readiness has not been claimed merely because Phase 4A verification tests pass.
+
+## 8. Verifier / solver separation
+
+Phase 4B separates trace trust handling from reusable semantic solving.
+
+The verifier owns:
+
+- production trace/schema validation;
+- reference and proof-claim binding;
+- candidate-domain evidence and completeness checks;
+- provenance validation and cycle detection;
+- interpretation of `status_claim`;
+- mapping solver outcomes into the public verification result model.
+
+The solver owns:
+
+- the typed `SemanticProblem` representation;
+- finite-domain SAT/UNSAT evaluation;
+- conservative handling of unsupported semantic gaps;
+- subset-minimal core extraction;
+- independent verification of supplied cores.
+
+The solver does not receive the resolver's diagnostic text, native incompatibility objects, status claims, or arbitrary `Trace` objects. The verifier reconstructs the semantic problem first. This prevents resolver-specific transport concerns from becoming hidden mathematical assumptions.
+
+The solver and core API are documented in `docs/PRODUCTION_SOLVER.md`.
