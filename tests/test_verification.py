@@ -1229,7 +1229,7 @@ class ProductionVerifierTests(unittest.TestCase):
         self.assertEqual(result.status, VerificationStatus.VERIFIED_SAT)
 
     def test_invalid_serialized_trace(self):
-        result = verify_serialized(b"{"schema":"resolvewhy-trace/research-2026"}")
+        result = verify_serialized(b'{"schema":"resolvewhy-trace/research-2026"}')
         self.assertEqual(result.status, VerificationStatus.INVALID_TRACE)
 
     def test_deterministic_result(self):
