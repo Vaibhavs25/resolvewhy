@@ -270,12 +270,36 @@ def _constraint_source(
             (item for item in trace.requirements if str(item.id) == str(source_ref)),
             None,
         )
-        if source is None:
+        if source is not None:
+            return source
+
+        packages = {
+            literal.package
+            for literal in constraint.literals
+            if literal.package is not None
+        }
+        if len(packages) != 1 or len(constraint.literals) != 1:
             raise SemanticGap(
                 "invalid_semantic_binding",
-                f"requirement constraint {constraint.id} has no requirement source reference",
+                f"requirement constraint {constraint.id} has no unique requirement source",
             )
-        return source
+        literal = constraint.literals[0]
+        matches = [
+            item
+            for item in trace.requirements
+            if (
+                item.package == next(iter(packages))
+                and item.constraint is not None
+                and item.constraint.operator == literal.operator
+                and item.constraint.version == literal.value
+            )
+        ]
+        if len(matches) == 1:
+            return matches[0]
+        raise SemanticGap(
+            "invalid_semantic_binding",
+            f"requirement constraint {constraint.id} has no unique requirement source",
+        )
     if literal_kind is SemanticConstraintKind.DEPENDENCY:
         source_ref = _semantic_source_ref(trace, constraint, "dependency")
         source = next(
