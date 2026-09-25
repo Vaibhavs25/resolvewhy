@@ -82,6 +82,7 @@ def _base_result(
         reasons=reasons,
         issues=issues,
         branch_results=branch_results,
+        evaluation_domain_id=(str(trace.evaluation_domain.id) if trace is not None else None),
     )
 
 

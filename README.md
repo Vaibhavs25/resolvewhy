@@ -147,3 +147,5 @@ The repository preserves earlier research documents so that discovered defects a
 ## Status statement
 
 This repository is a research record. It does not claim a production resolver, ecosystem standard, maintainer endorsement, or production readiness.
+
+**Phase 5 — Human Explanation Layer:** implemented and tested for already independently verified semantic results. The deterministic explanation layer renders verified SAT/UNSAT, insufficient-evidence, and invalid-trace outcomes without trusting resolver diagnostics or establishing new proof claims. See docs/PRODUCTION_EXPLANATION.md.

@@ -49,6 +49,7 @@ class VerificationResult:
     reasons: tuple[str, ...] = ()
     issues: tuple[VerificationIssue, ...] = ()
     branch_results: tuple[str, ...] = ()
+    evaluation_domain_id: str | None = None
 
     @property
     def is_verified(self) -> bool:
