@@ -671,6 +671,21 @@ def _check_constraint(
             candidate = candidates[str(artifact.candidate_ref)]
             if not _candidate_is_explicitly_selected(assignment, candidate):
                 continue
+            if artifact.selection_status is ArtifactSelectionStatus.INCOMPATIBLE:
+                if artifact.compatible is True:
+                    raise SemanticGap(
+                        "invalid_artifact_semantics",
+                        f"artifact {artifact.id} is marked incompatible but also marked compatible",
+                    )
+                return True, False
+            if artifact.selection_status in {
+                ArtifactSelectionStatus.YANKED,
+                ArtifactSelectionStatus.FILTERED,
+                ArtifactSelectionStatus.UNKNOWN,
+            }:
+                if artifact.compatible is False:
+                    return True, False
+                return False, True
             if artifact.compatible is None:
                 return False, True
             if artifact.compatible is False:
