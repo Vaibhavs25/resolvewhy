@@ -272,8 +272,6 @@ def _validate_candidate_coverage(
                             ),
                             ref=evidence_ref,
                         )
-                    if TraceRefLike := None:
-                        pass
                     if not any(
                         supported.kind is ReferenceKind.CANDIDATE_DOMAIN
                         and str(supported.id) == str(domain.id)
