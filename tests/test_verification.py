@@ -660,6 +660,62 @@ class ProductionVerifierTests(unittest.TestCase):
         )
         self.assertEqual(verify(trace).status, VerificationStatus.VERIFIED_UNSAT)
 
+    def test_complete_empty_candidate_domain_can_prove_unsat(self):
+        ctx = _ctx()
+        req = _req("pkg", "==", "1.0")
+        c = _constraint(
+            "c:pkg", SemanticConstraintKind.REQUIREMENT,
+            (SemanticLiteral(kind=SemanticConstraintKind.REQUIREMENT, package="pkg", operator="==", value="1.0"),),
+            TraceRef(ReferenceKind.REQUIREMENT, req.id), "obs:c:pkg",
+        )
+        result = verify(_trace(
+            contexts=(ctx,), requirements=(req,),
+            domains=(_domain("pkg", ctx, ()),), constraints=(c,),
+        ))
+        self.assertEqual(result.status, VerificationStatus.VERIFIED_UNSAT)
+
+    def test_insufficient_unsupported_version(self):
+        ctx = _ctx()
+        cand = _candidate("pkg", "1.0.post1")
+        req = _req("pkg", "==", "1.0.post1")
+        c = _constraint(
+            "c:pkg", SemanticConstraintKind.REQUIREMENT,
+            (SemanticLiteral(kind=SemanticConstraintKind.REQUIREMENT, package="pkg", operator="==", value="1.0.post1"),),
+            TraceRef(ReferenceKind.REQUIREMENT, req.id), "obs:c:pkg",
+        )
+        result = verify(_trace(
+            contexts=(ctx,), requirements=(req,), candidates=(cand,),
+            domains=(_domain("pkg", ctx, (cand,)),), constraints=(c,),
+        ))
+        self.assertEqual(result.status, VerificationStatus.INSUFFICIENT_EVIDENCE)
+
+    def test_insufficient_yanked_artifact_without_yank_policy(self):
+        ctx = _ctx()
+        cand = _candidate("pkg", "1.0")
+        req = _req("pkg", "==", "1.0")
+        art = Artifact(
+            id="art:pkg",
+            candidate_ref=cand.id,
+            compatible=True,
+            selection_status=ArtifactSelectionStatus.YANKED,
+        )
+        c_req = _constraint(
+            "c:pkg", SemanticConstraintKind.REQUIREMENT,
+            (SemanticLiteral(kind=SemanticConstraintKind.REQUIREMENT, package="pkg", operator="==", value="1.0"),),
+            TraceRef(ReferenceKind.REQUIREMENT, req.id), "obs:c:pkg",
+        )
+        c_art = _constraint(
+            "c:artifact", SemanticConstraintKind.ARTIFACT_COMPATIBILITY,
+            (SemanticLiteral(kind=SemanticConstraintKind.ARTIFACT_COMPATIBILITY, artifact_ref=art.id, candidate_ref=cand.id),),
+            TraceRef(ReferenceKind.ARTIFACT, art.id), "obs:c:artifact",
+        )
+        result = verify(_trace(
+            contexts=(ctx,), requirements=(req,), candidates=(cand,),
+            domains=(_domain("pkg", ctx, (cand,)),), artifacts=(art,),
+            constraints=(c_req, c_art),
+        ))
+        self.assertEqual(result.status, VerificationStatus.INSUFFICIENT_EVIDENCE)
+
     def test_insufficient_unknown_candidate_coverage(self):
         ctx = _ctx()
         cand = _candidate("pkg", "1.0")
@@ -1178,6 +1234,7 @@ class ProductionVerifierTests(unittest.TestCase):
             constraints=(c1, c2), claim=claim,
         ))
         self.assertEqual(result.status, VerificationStatus.VERIFIED_UNSAT)
+        self.assertTrue(result.core_verified)
         self.assertTrue(result.minimality_verified)
 
     def _unsat_three_constraints_fixture(self) -> Trace:
@@ -1223,6 +1280,7 @@ class ProductionVerifierTests(unittest.TestCase):
         )
         result = verify(replace(trace, proof_claim=bad_claim))
         self.assertEqual(result.status, VerificationStatus.VERIFIED_UNSAT)
+        self.assertFalse(result.core_verified)
         self.assertFalse(result.minimality_verified)
         self.assertIn("minimality_not_verified", result.reasons)
 
