@@ -478,7 +478,8 @@ class ProductionVerifierTests(unittest.TestCase):
 
     def test_unsat_direct_version_contradiction(self):
         ctx = _ctx()
-        cand = _candidate("pkg", "1.0")
+        cand = _candidate("pkg", "1.0", "one")
+        cand2 = _candidate("pkg", "2.0", "two")
         r1 = _req("pkg", ">=", "2.0", "ge")
         r2 = _req("pkg", "<", "2.0", "lt")
         c1 = _constraint(
@@ -1171,8 +1172,8 @@ class ProductionVerifierTests(unittest.TestCase):
             subset_minimal_claim=True,
         )
         result = verify(_trace(
-            contexts=(ctx,), requirements=(r1, r2), candidates=(cand,),
-            domains=(_domain("pkg", ctx, (cand,)),),
+            contexts=(ctx,), requirements=(r1, r2), candidates=(cand, cand2),
+            domains=(_domain("pkg", ctx, (cand, cand2)),),
             constraints=(c1, c2), claim=claim,
         ))
         self.assertEqual(result.status, VerificationStatus.VERIFIED_UNSAT)
