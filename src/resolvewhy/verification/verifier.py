@@ -513,7 +513,7 @@ def _combine(
     return results[0]
 
 
-def _minimality(
+def _core_verification(
     trace: Trace,
     premise_constraints,
     core_ids: tuple[str, ...],
@@ -521,21 +521,32 @@ def _minimality(
 ) -> bool:
     if not core_ids:
         return False
-
-    constraint_by_id = {
-        str(constraint.id): constraint
-        for constraint in premise_constraints
-    }
-    core = tuple(constraint_by_id[item] for item in core_ids)
-
-    results, error = _evaluate(trace, core, contexts)
-    if error is not None or _combine(trace.proof_claim.quantifier, results) is not BranchOutcome.UNSAT:
+    by_id = {str(constraint.id): constraint for constraint in premise_constraints}
+    try:
+        core = tuple(by_id[item] for item in core_ids)
+    except KeyError:
         return False
+    results, error = _evaluate(trace, core, contexts)
+    if error is not None:
+        return False
+    return _combine(trace.proof_claim.quantifier, results) is BranchOutcome.UNSAT
+
+
+def _minimality(
+    trace: Trace,
+    premise_constraints,
+    core_ids: tuple[str, ...],
+    contexts,
+) -> bool:
+    if not _core_verification(trace, premise_constraints, core_ids, contexts):
+        return False
+
+    by_id = {str(constraint.id): constraint for constraint in premise_constraints}
+    core = tuple(by_id[item] for item in core_ids)
 
     for removed in core_ids:
         reduced = tuple(item for item in core if str(item.id) != removed)
         if not reduced:
-            # The empty conjunction is satisfiable over the finite fragment.
             deletion_outcome = BranchOutcome.SAT
         else:
             results, error = _evaluate(trace, reduced, contexts)
