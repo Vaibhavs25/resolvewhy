@@ -41,7 +41,7 @@ class EvaluationLimit(SemanticGap):
     pass
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class VersionKey:
     release: tuple[int, int, int]
     pre_rank: int
