@@ -807,7 +807,7 @@ class ProductionVerifierTests(unittest.TestCase):
         )
 
     def test_invalid_malformed_reference(self):
-        trace = _trace()
+        trace = deserialize_trace(Path("tests/fixtures/production_trace.json").read_bytes())
         artifact = Artifact(id="art:broken", candidate_ref="missing")
         broken = replace(trace, artifacts=(artifact,))
         self.assertEqual(verify(broken).status, VerificationStatus.INVALID_TRACE)
@@ -831,7 +831,7 @@ class ProductionVerifierTests(unittest.TestCase):
         )
 
     def test_invalid_proof_premise(self):
-        trace = _trace()
+        trace = deserialize_trace(Path("tests/fixtures/production_trace.json").read_bytes())
         claim = replace(trace.proof_claim, premise_refs=("missing-constraint",))
         self.assertEqual(
             verify(replace(trace, proof_claim=claim)).status,
@@ -839,7 +839,7 @@ class ProductionVerifierTests(unittest.TestCase):
         )
 
     def test_invalid_proof_domain_binding(self):
-        trace = _trace()
+        trace = deserialize_trace(Path("tests/fixtures/production_trace.json").read_bytes())
         claim = replace(trace.proof_claim, evaluation_domain_ref="missing-domain")
         self.assertEqual(
             verify(replace(trace, proof_claim=claim)).status,
