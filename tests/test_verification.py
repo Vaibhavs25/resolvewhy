@@ -630,6 +630,7 @@ class ProductionVerifierTests(unittest.TestCase):
             evaluation_domain_ref=domain.id,
             status_claim=ProofStatus.UNSAT,
             premise_refs=(c_req.id, c_py.id),
+            branch_ref=old.id if quantifier is ProofQuantifier.BRANCH else None,
         )
         return _trace(
             contexts=(linux, old),
