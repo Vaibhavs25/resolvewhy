@@ -11,11 +11,17 @@ Research prototype for formally verified explanations of dependency-resolution f
 
 ## Production implementation status
 
-**Phase 1 — Production Semantic Core:** implemented as the initial reusable foundation under `src/resolvewhy`.
+**Phase 1 — Production Semantic Core:** complete.
 
-The current production package contains typed semantic domain objects and structural validation for the validated research concepts. It does not yet provide resolver adapters, production SAT/UNSAT verification, CLI/API integrations, or production readiness.
+**Phase 2 — Production Trace Format:** complete as `resolvewhy-trace/1.0`.
 
-See `docs/PRODUCTION_SEMANTIC_CORE.md` and `AI_BUILD_CONTEXT.md`.
+**Phase 3A — pip/resolvelib Adapter:** implemented and validated. The production suite and the Windows production CI both pass 75/75, including the controlled pip/resolvelib integration paths.
+
+**Phase 4A — Production Independent Verifier:** implemented for the declared finite semantic fragment. The verifier independently reconstructs and evaluates production `resolvewhy-trace/1.0` traces and returns typed `VERIFIED_SAT`, `VERIFIED_UNSAT`, `INSUFFICIENT_EVIDENCE`, or `INVALID_TRACE` results. It does not import the research verifier or depend on a resolver.
+
+Phase 4A does not imply general production readiness. Unsupported semantics continue to fail closed, and the project has not started Phase 4B, the explanation layer, CLI/API, or additional resolver adapters.
+
+See `docs/PRODUCTION_SEMANTIC_CORE.md`, `docs/PRODUCTION_TRACE_FORMAT.md`, `docs/PRODUCTION_VERIFIER.md`, and `AI_BUILD_CONTEXT.md`.
 
 ## Production trace format
 
