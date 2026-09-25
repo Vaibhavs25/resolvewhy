@@ -369,35 +369,35 @@ def _validate_provenance(
     for record in trace.provenance:
         graph[str(record.id)] = set()
         for premise in record.premise_refs:
+            if premise.kind is ReferenceKind.EVIDENCE:
+                observation = evidence.get(str(premise.id))
+                if observation is None:
+                    return _invalid(
+                        trace,
+                        (
+                            _issue(
+                                "invalid_provenance",
+                                (
+                                    f"provenance {record.id} references missing "
+                                    f"evidence {premise.id}"
+                                ),
+                                premise,
+                            ),
+                        ),
+                    )
+                if observation.state in _BLOCKING_EVIDENCE:
+                    return _insufficient(
+                        trace,
+                        reason="incomplete_evidence",
+                        message=(
+                            f"provenance evidence {observation.id} is "
+                            f"{observation.state.value}"
+                        ),
+                        ref=premise,
+                    )
             nested = by_subject.get((premise.kind, str(premise.id)))
             if nested:
                 graph[str(record.id)].update(str(item.id) for item in nested)
-        for evidence_ref in record.evidence_refs:
-            observation = evidence.get(str(evidence_ref.id))
-            if observation is None:
-                return _invalid(
-                    trace,
-                    (
-                        _issue(
-                            "invalid_provenance",
-                            (
-                                f"provenance {record.id} references missing evidence "
-                                f"{evidence_ref.id}"
-                            ),
-                            evidence_ref,
-                        ),
-                    ),
-                )
-            if observation.state in _BLOCKING_EVIDENCE:
-                return _insufficient(
-                    trace,
-                    reason="incomplete_evidence",
-                    message=(
-                        f"provenance evidence {observation.id} is "
-                        f"{observation.state.value}"
-                    ),
-                    ref=evidence_ref,
-                )
 
     visiting: set[str] = set()
     visited: set[str] = set()
