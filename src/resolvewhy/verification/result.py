@@ -44,6 +44,7 @@ class VerificationResult:
     evaluation_domain: tuple[str, ...]
     premise_ids: tuple[str, ...]
     core_ids: tuple[str, ...]
+    core_verified: bool | None
     minimality_verified: bool | None
     reasons: tuple[str, ...] = ()
     issues: tuple[VerificationIssue, ...] = ()
