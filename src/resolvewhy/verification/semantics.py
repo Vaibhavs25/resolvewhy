@@ -219,17 +219,55 @@ def _candidate_allowed(candidate: Candidate, policy: ResolutionPolicy) -> tuple[
     return True, False
 
 
+def _semantic_source_ref(
+    trace: Trace,
+    constraint: SemanticConstraint,
+    kind: str,
+) -> str:
+    direct = [
+        ref.id
+        for ref in constraint.source_refs
+        if ref.kind.value == kind
+    ]
+    if len(set(direct)) == 1:
+        return direct[0]
+
+    evidence_by_id = {
+        str(item.id): item
+        for item in trace.evidence_state.observations
+    }
+    supported: set[str] = set()
+    for ref in constraint.source_refs:
+        if ref.kind.value != "evidence":
+            continue
+        observation = evidence_by_id.get(str(ref.id))
+        if observation is None:
+            continue
+        for supported_ref in observation.supports_refs:
+            if supported_ref.kind.value == kind:
+                supported.add(str(supported_ref.id))
+    if len(supported) == 1:
+        return next(iter(supported))
+    if not supported:
+        raise SemanticGap(
+            "invalid_semantic_binding",
+            f"constraint {constraint.id} has no uniquely supported {kind} source",
+        )
+    raise SemanticGap(
+        "invalid_semantic_binding",
+        f"constraint {constraint.id} has ambiguous {kind} sources",
+    )
+
+
 def _constraint_source(
     trace: Trace,
     constraint: SemanticConstraint,
 ) -> Requirement | DependencyEdge | Candidate | object:
     literal_kind = constraint.kind
     if literal_kind is SemanticConstraintKind.REQUIREMENT:
+        source_ref = _semantic_source_ref(trace, constraint, "requirement")
         source = next(
-            (item for item in trace.requirements if str(item.id) == next(
-                (ref.id for ref in constraint.source_refs if ref.kind.value == "requirement"),
-                "",
-            )),
+            (item for item in trace.requirements if str(item.id) == str(source_ref)),
             None,
         )
         if source is None:
@@ -239,11 +277,9 @@ def _constraint_source(
             )
         return source
     if literal_kind is SemanticConstraintKind.DEPENDENCY:
+        source_ref = _semantic_source_ref(trace, constraint, "dependency")
         source = next(
-            (item for item in trace.dependencies if str(item.id) == next(
-                (ref.id for ref in constraint.source_refs if ref.kind.value == "dependency"),
-                "",
-            )),
+            (item for item in trace.dependencies if str(item.id) == str(source_ref)),
             None,
         )
         if source is None:
@@ -341,19 +377,13 @@ def _constraint_packages(
     packages: set[str] = set()
     for constraint in constraints:
         if constraint.kind is SemanticConstraintKind.REQUIREMENT:
-            source_ref = next(
-                (ref.id for ref in constraint.source_refs if ref.kind.value == "requirement"),
-                None,
-            )
+            source_ref = _semantic_source_ref(trace, constraint, "requirement")
             requirement = requirements.get(str(source_ref))
             if requirement is None:
                 raise SemanticGap("invalid_semantic_binding", f"constraint {constraint.id} has no requirement source")
             packages.add(requirement.package)
         elif constraint.kind is SemanticConstraintKind.DEPENDENCY:
-            source_ref = next(
-                (ref.id for ref in constraint.source_refs if ref.kind.value == "dependency"),
-                None,
-            )
+            source_ref = _semantic_source_ref(trace, constraint, "dependency")
             dependency = dependencies.get(str(source_ref))
             if dependency is None:
                 raise SemanticGap("invalid_semantic_binding", f"constraint {constraint.id} has no dependency source")
@@ -676,6 +706,11 @@ def evaluate_branch(
                 allowed, unknown = _candidate_allowed(candidate, trace.resolution_policy)
                 if unknown:
                     unknown_possible = True
+                    assignment.pop(package, None)
+                    continue
+                if not allowed:
+                    assignment.pop(package, None)
+                    continue
 
             rejected = False
             local_unknown = False
