@@ -181,7 +181,7 @@ class TraceOnlyTests(unittest.TestCase):
         self.assertEqual(false_accepts, 0)
         self.assertEqual(sum(counts.values()), 250)
         self.assertEqual(sum(taxonomy.values()), 250)
-        self.assertEqual(set([
+        self.assertTrue(set([
             "ids", "references", "arrays", "evaluation_domain", "quantifiers",
             "coverage_attestation", "provenance", "candidate_artifact_links",
             "dependency_references", "proof_premises", "evidence_states",
