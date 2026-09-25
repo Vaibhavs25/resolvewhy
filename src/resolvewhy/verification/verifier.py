@@ -50,6 +50,7 @@ def _base_result(
     reasons: tuple[str, ...] = (),
     branch_results: tuple[str, ...] = (),
     core_ids: tuple[str, ...] = (),
+    core_verified: bool | None = None,
     minimality_verified: bool | None = None,
     independently_verified: bool | None = None,
 ) -> VerificationResult:
@@ -77,6 +78,7 @@ def _base_result(
         evaluation_domain=evaluation_domain,
         premise_ids=premise_ids,
         core_ids=core_ids,
+        core_verified=core_verified,
         minimality_verified=minimality_verified,
         reasons=reasons,
         issues=issues,
@@ -701,6 +703,7 @@ def verify_serialized(data: str | bytes | bytearray) -> VerificationResult:
             evaluation_domain=(),
             premise_ids=(),
             core_ids=(),
+            core_verified=None,
             minimality_verified=None,
             reasons=("invalid_trace",),
             issues=(_issue("invalid_trace", str(exc)),),
