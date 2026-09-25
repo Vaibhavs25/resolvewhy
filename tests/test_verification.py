@@ -1148,7 +1148,8 @@ class ProductionVerifierTests(unittest.TestCase):
 
     def test_subset_minimality_is_independently_verified(self):
         ctx = _ctx()
-        cand = _candidate("pkg", "1.0")
+        cand = _candidate("pkg", "1.0", "one")
+        cand2 = _candidate("pkg", "2.0", "two")
         r1 = _req("pkg", ">=", "2.0", "ge")
         r2 = _req("pkg", "<", "2.0", "lt")
         c1 = _constraint(
