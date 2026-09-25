@@ -223,7 +223,7 @@ def _semantic_source_ref(
     trace: Trace,
     constraint: SemanticConstraint,
     kind: str,
-) -> str:
+) -> str | None:
     direct = [
         ref.id
         for ref in constraint.source_refs
@@ -249,10 +249,7 @@ def _semantic_source_ref(
     if len(supported) == 1:
         return next(iter(supported))
     if not supported:
-        raise SemanticGap(
-            "invalid_semantic_binding",
-            f"constraint {constraint.id} has no uniquely supported {kind} source",
-        )
+        return None
     raise SemanticGap(
         "invalid_semantic_binding",
         f"constraint {constraint.id} has ambiguous {kind} sources",
@@ -266,12 +263,13 @@ def _constraint_source(
     literal_kind = constraint.kind
     if literal_kind is SemanticConstraintKind.REQUIREMENT:
         source_ref = _semantic_source_ref(trace, constraint, "requirement")
-        source = next(
-            (item for item in trace.requirements if str(item.id) == str(source_ref)),
-            None,
-        )
-        if source is not None:
-            return source
+        if source_ref is not None:
+            source = next(
+                (item for item in trace.requirements if str(item.id) == str(source_ref)),
+                None,
+            )
+            if source is not None:
+                return source
 
         packages = {
             literal.package
@@ -302,16 +300,43 @@ def _constraint_source(
         )
     if literal_kind is SemanticConstraintKind.DEPENDENCY:
         source_ref = _semantic_source_ref(trace, constraint, "dependency")
-        source = next(
-            (item for item in trace.dependencies if str(item.id) == str(source_ref)),
-            None,
-        )
-        if source is None:
-            raise SemanticGap(
-                "invalid_semantic_binding",
-                f"dependency constraint {constraint.id} has no dependency source reference",
+        if source_ref is not None:
+            source = next(
+                (item for item in trace.dependencies if str(item.id) == str(source_ref)),
+                None,
             )
-        return source
+            if source is not None:
+                return source
+        parent_refs = {
+            str(literal.candidate_ref)
+            for literal in constraint.literals
+            if literal.candidate_ref is not None
+        }
+        packages = {
+            literal.package
+            for literal in constraint.literals
+            if literal.package is not None
+        }
+        matches = [
+            item
+            for item in trace.dependencies
+            if (
+                len(parent_refs) == 1
+                and len(packages) == 1
+                and str(item.parent_candidate_ref) in parent_refs
+                and any(
+                    requirement.package == next(iter(packages))
+                    for requirement in trace.requirements
+                    if str(requirement.id) == str(item.requirement_ref)
+                )
+            )
+        ]
+        if len(matches) == 1:
+            return matches[0]
+        raise SemanticGap(
+            "invalid_semantic_binding",
+            f"dependency constraint {constraint.id} has no unique dependency source",
+        )
     if literal_kind is SemanticConstraintKind.REQUIRES_PYTHON:
         candidate_ref = next(
             (literal.candidate_ref for literal in constraint.literals if literal.candidate_ref is not None),
@@ -401,16 +426,14 @@ def _constraint_packages(
     packages: set[str] = set()
     for constraint in constraints:
         if constraint.kind is SemanticConstraintKind.REQUIREMENT:
-            source_ref = _semantic_source_ref(trace, constraint, "requirement")
-            requirement = requirements.get(str(source_ref))
-            if requirement is None:
-                raise SemanticGap("invalid_semantic_binding", f"constraint {constraint.id} has no requirement source")
+            requirement = _constraint_source(trace, constraint)
+            if not isinstance(requirement, Requirement):
+                raise SemanticGap("invalid_semantic_binding", f"constraint {constraint.id} did not resolve to a requirement")
             packages.add(requirement.package)
         elif constraint.kind is SemanticConstraintKind.DEPENDENCY:
-            source_ref = _semantic_source_ref(trace, constraint, "dependency")
-            dependency = dependencies.get(str(source_ref))
-            if dependency is None:
-                raise SemanticGap("invalid_semantic_binding", f"constraint {constraint.id} has no dependency source")
+            dependency = _constraint_source(trace, constraint)
+            if not isinstance(dependency, DependencyEdge):
+                raise SemanticGap("invalid_semantic_binding", f"constraint {constraint.id} did not resolve to a dependency")
             parent = candidates.get(str(dependency.parent_candidate_ref))
             if parent is None:
                 raise SemanticGap("invalid_semantic_binding", f"dependency {dependency.id} references missing parent")
