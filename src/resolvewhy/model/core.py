@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal, NewType
 
-
 RequirementId = NewType("RequirementId", str)
 DependencyEdgeId = NewType("DependencyEdgeId", str)
 CandidateId = NewType("CandidateId", str)
@@ -162,7 +161,7 @@ class MarkerAtom:
 class MarkerExpression:
     kind: Literal["atom", "and", "or", "not"]
     atom: MarkerAtom | None = None
-    children: tuple["MarkerExpression", ...] = ()
+    children: tuple[MarkerExpression, ...] = ()
 
     def __post_init__(self) -> None:
         if self.kind == "atom":
@@ -429,7 +428,7 @@ class EvidenceState:
 
     def __post_init__(self) -> None:
         if not isinstance(self.overall, EvidenceStateKind):
-            raise ValueError("EvidenceState.overall is invalid")
+            raise TypeError("EvidenceState.overall is invalid")
 
 
 @dataclass(frozen=True)

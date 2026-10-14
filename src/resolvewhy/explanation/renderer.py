@@ -1,5 +1,8 @@
 from __future__ import annotations
+
 from .model import Explanation
+
+
 def render_explanation(explanation:Explanation)->str:
     lines=["resolvewhy explanation",f"Result: {explanation.kind.value}",
            f"Proof scope: {explanation.scope.quantifier.value if explanation.scope.quantifier else 'unknown'}",
@@ -9,18 +12,18 @@ def render_explanation(explanation:Explanation)->str:
     elif explanation.kind.value=="VERIFIED_SAT": lines += ["","Verified semantic information:"]
     elif explanation.kind.value=="INSUFFICIENT_EVIDENCE": lines += ["","Evidence status:","The available evidence is insufficient for an independent SAT/UNSAT conclusion."]
     else: lines += ["","Trace validation:","The trace failed structural or semantic validation; resolver outcome fields are not proof."]
-    for x in explanation.constraints: lines.append(f"- [{x.id}] {x.description}")
+    for constraint in explanation.constraints: lines.append(f"- [{constraint.id}] {constraint.description}")
     if explanation.dependency_paths:
         lines += ["","Dependency relationships:"]
-        for x in explanation.dependency_paths:
-            chain=tuple(v for v in (x.parent_candidate_ref,x.dependency_ref,x.requirement_ref) if v)
-            lines.append(f"- [{x.id}] "+" -> ".join(chain))
+        for path in explanation.dependency_paths:
+            chain=tuple(v for v in (path.parent_candidate_ref,path.dependency_ref,path.requirement_ref) if v)
+            lines.append(f"- [{path.id}] "+" -> ".join(chain))
     if explanation.candidates:
         lines += ["","Relevant candidates:"]
-        for x in explanation.candidates: lines.append(f"- [{x.id}] {x.package}=={x.version or 'unknown-version'} ({x.source_ref or 'unknown-source'})")
+        for candidate in explanation.candidates: lines.append(f"- [{candidate.id}] {candidate.package}=={candidate.version or 'unknown-version'} ({candidate.source_ref or 'unknown-source'})")
     if explanation.artifacts:
         lines += ["","Relevant artifacts:"]
-        for x in explanation.artifacts: lines.append(f"- [{x.id}] candidate={x.candidate_ref}; compatible={'unknown' if x.compatible is None else str(x.compatible).lower()}; status={x.selection_status}")
+        for artifact in explanation.artifacts: lines.append(f"- [{artifact.id}] candidate={artifact.candidate_ref}; compatible={'unknown' if artifact.compatible is None else str(artifact.compatible).lower()}; status={artifact.selection_status}")
     if explanation.policy_facts:
         lines += ["","Policy facts:"]+[f"- {x.key}={x.value}" for x in explanation.policy_facts]
     if explanation.evidence_facts:

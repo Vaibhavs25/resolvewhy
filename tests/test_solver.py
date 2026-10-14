@@ -1,32 +1,22 @@
 from __future__ import annotations
 
-from dataclasses import replace
 import unittest
+from dataclasses import replace
 
+import tests.test_verification as verification_fixtures
 from resolvewhy.model import (
     Artifact,
     ArtifactSelectionStatus,
-    Candidate,
-    CandidateKind,
     CoverageStatus,
     DependencyEdge,
-    EvaluationDomain,
-    EvaluationDomainKind,
-    EvidenceStateKind,
     MarkerAtom,
     MarkerExpression,
-    ProofClaim,
     ProofQuantifier,
     ProofStatus,
     ReferenceKind,
-    Requirement,
-    ResolutionPolicy,
-    SemanticConstraint,
     SemanticConstraintKind,
     SemanticLiteral,
     TraceRef,
-    TraceScope,
-    VersionConstraint,
 )
 from resolvewhy.solving import (
     SemanticProblem,
@@ -37,9 +27,6 @@ from resolvewhy.solving import (
 )
 from resolvewhy.verification import verify
 from resolvewhy.verification.result import VerificationStatus
-
-import tests.test_verification as verification_fixtures
-
 from tests.test_verification import (
     _candidate,
     _constraint,

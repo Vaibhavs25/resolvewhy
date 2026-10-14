@@ -20,7 +20,12 @@ def __getattr__(name: str):
         from .solver import SolveResult, SolveStatus, solve
         return {"SolveResult": SolveResult, "SolveStatus": SolveStatus, "solve": solve}[name]
     if name in {"CoreResult", "CoreVerificationResult", "minimal_unsat_core", "verify_unsat_core"}:
-        from .core import CoreResult, CoreVerificationResult, minimal_unsat_core, verify_unsat_core
+        from .core import (
+            CoreResult,
+            CoreVerificationResult,
+            minimal_unsat_core,
+            verify_unsat_core,
+        )
         return {
             "CoreResult": CoreResult,
             "CoreVerificationResult": CoreVerificationResult,

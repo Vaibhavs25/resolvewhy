@@ -1,18 +1,16 @@
 from __future__ import annotations
 
+import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
-import re
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 from resolvewhy.model import (
     ArtifactSelectionStatus,
     Candidate,
-    CandidateDomain,
-    CandidateKind,
     DependencyEdge,
     MarkerExpression,
-    ProofQuantifier,
     Requirement,
     ResolutionPolicy,
     RuntimeContext,
@@ -284,7 +282,7 @@ def _constraint_source(
                 f"requirement constraint {constraint.id} has no unique requirement source",
             )
         literal = constraint.literals[0]
-        matches = [
+        dependency_matches = [
             item
             for item in problem.requirements
             if (
@@ -294,8 +292,8 @@ def _constraint_source(
                 and item.constraint.version == literal.value
             )
         ]
-        if len(matches) == 1:
-            return matches[0]
+        if len(dependency_matches) == 1:
+            return dependency_matches[0]
         raise SemanticGap(
             "invalid_semantic_binding",
             f"requirement constraint {constraint.id} has no unique requirement source",
@@ -303,12 +301,12 @@ def _constraint_source(
     if literal_kind is SemanticConstraintKind.DEPENDENCY:
         source_ref = _semantic_source_ref(problem, constraint, "dependency")
         if source_ref is not None:
-            source = next(
+            dependency_source = next(
                 (item for item in problem.dependencies if str(item.id) == str(source_ref)),
                 None,
             )
-            if source is not None:
-                return source
+            if dependency_source is not None:
+                return dependency_source
         parent_refs = {
             str(literal.candidate_ref)
             for literal in constraint.literals
@@ -349,16 +347,16 @@ def _constraint_source(
                 "invalid_semantic_binding",
                 f"Requires-Python constraint {constraint.id} lacks candidate identity",
             )
-        source = next(
+        candidate_source = next(
             (item for item in problem.candidates if str(item.id) == str(candidate_ref)),
             None,
         )
-        if source is None:
+        if candidate_source is None:
             raise SemanticGap(
                 "invalid_semantic_binding",
                 f"Requires-Python constraint {constraint.id} references missing candidate",
             )
-        return source
+        return candidate_source
     if literal_kind is SemanticConstraintKind.ARTIFACT_COMPATIBILITY:
         artifact_ref = next(
             (literal.artifact_ref for literal in constraint.literals if literal.artifact_ref is not None),
@@ -369,16 +367,16 @@ def _constraint_source(
                 "invalid_semantic_binding",
                 f"artifact constraint {constraint.id} lacks artifact identity",
             )
-        source = next(
+        artifact_source = next(
             (item for item in problem.artifacts if str(item.id) == str(artifact_ref)),
             None,
         )
-        if source is None:
+        if artifact_source is None:
             raise SemanticGap(
                 "invalid_semantic_binding",
                 f"artifact constraint {constraint.id} references missing artifact",
             )
-        return source
+        return artifact_source
     raise SemanticGap(
         "unsupported_semantics",
         f"semantic constraint kind {literal_kind.value!r} is outside the supported fragment",
@@ -422,9 +420,6 @@ def _constraint_packages(
 ) -> set[str]:
     candidates = {str(item.id): item for item in problem.candidates}
     artifacts = {str(item.id): item for item in problem.artifacts}
-    requirements = {str(item.id): item for item in problem.requirements}
-    dependencies = {str(item.id): item for item in problem.dependencies}
-
     packages: set[str] = set()
     for constraint in constraints:
         if constraint.kind is SemanticConstraintKind.REQUIREMENT:
@@ -474,7 +469,8 @@ def _candidate_is_explicitly_selected(
     assignment: dict[str, Candidate | None],
     candidate: Candidate,
 ) -> bool:
-    return assignment.get(candidate.package) is not None and assignment[candidate.package].id == candidate.id
+    selected = assignment.get(candidate.package)
+    return selected is not None and selected.id == candidate.id
 
 
 def _literal_version_ok(candidate: Candidate, literal: SemanticLiteral) -> bool:
@@ -519,12 +515,22 @@ def _validate_constraint_shape(
                     f"constraint {constraint.id} has a literal without package identity",
                 )
             if constraint.kind is SemanticConstraintKind.REQUIREMENT:
+                if not isinstance(source, Requirement):
+                    raise SemanticGap(
+                        "invalid_semantic_binding",
+                        f"requirement constraint {constraint.id} did not resolve to a requirement",
+                    )
                 if literal.package != package:
                     raise SemanticGap(
                         "invalid_semantic_binding",
                         f"requirement constraint {constraint.id} targets {literal.package!r}, expected {package!r}",
                     )
             else:
+                if not isinstance(source, DependencyEdge):
+                    raise SemanticGap(
+                        "invalid_semantic_binding",
+                        f"dependency constraint {constraint.id} did not resolve to a dependency",
+                    )
                 requirement = next(
                     (
                         item
@@ -710,9 +716,7 @@ def _candidate_options(
     result: list[Candidate | None] = []
     for candidate in values:
         allowed, unknown = _candidate_allowed(candidate, problem.resolution_policy)
-        if unknown:
-            result.append(candidate)
-        elif allowed:
+        if unknown or allowed:
             result.append(candidate)
     result.append(None)
     return tuple(result)

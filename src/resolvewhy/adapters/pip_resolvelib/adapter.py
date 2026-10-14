@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Iterable, TypeVar
+from typing import Any, Generic, TypeVar
+
+from resolvewhy.model import Trace
 
 from .capture import (
     CaptureBuffer,
@@ -10,7 +13,6 @@ from .capture import (
     RecordingReporter,
 )
 from .normalize import AdapterContext, SemanticAccessors, normalize_capture
-from resolvewhy.model import Trace
 
 RT = TypeVar("RT")
 CT = TypeVar("CT")
@@ -70,7 +72,7 @@ class PipResolvelibAdapter(Generic[RT, CT]):
         context: AdapterContext,
         reporter: Any | None = None,
         semantics: SemanticAccessors | None = None,
-    ) -> "PipResolvelibAdapter[Any, Any]":
+    ) -> PipResolvelibAdapter[Any, Any]:
         """Construct an adapter using an installed public resolvelib module."""
         try:
             import resolvelib
@@ -112,7 +114,7 @@ class PipResolvelibAdapter(Generic[RT, CT]):
         context: AdapterContext,
         reporter: Any | None = None,
         semantics: SemanticAccessors | None = None,
-    ) -> "PipResolvelibAdapter[Any, Any]":
+    ) -> PipResolvelibAdapter[Any, Any]:
         """Construct from either external or vendored resolvelib-compatible modules.
 
         This is useful for pip's vendored resolver runtime in a controlled test

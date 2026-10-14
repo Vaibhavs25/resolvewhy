@@ -1,8 +1,12 @@
 from __future__ import annotations
+
 from resolvewhy.model import ReferenceKind, VerificationStatus
 from resolvewhy.solving.problem import SemanticProblem
 from resolvewhy.verification.result import VerificationResult
+
 from .model import *
+
+
 def _constraint_description(c):
     parts=[]
     for l in c.literals:

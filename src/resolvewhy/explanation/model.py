@@ -1,7 +1,11 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
+
 from resolvewhy.model import ProofQuantifier, VerificationStatus
+
+
 class ExplanationKind(str, Enum):
     VERIFIED_UNSAT=VerificationStatus.VERIFIED_UNSAT.value
     VERIFIED_SAT=VerificationStatus.VERIFIED_SAT.value

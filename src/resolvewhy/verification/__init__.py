@@ -1,7 +1,13 @@
 """Independent verification for production resolvewhy traces."""
 
 from .result import VerificationIssue, VerificationReason, VerificationResult
-from .semantics import BranchOutcome, evaluate_branch, eval_marker, parse_version, version_satisfies
+from .semantics import (
+    BranchOutcome,
+    eval_marker,
+    evaluate_branch,
+    parse_version,
+    version_satisfies,
+)
 from .verifier import verify, verify_serialized
 
 __all__ = [

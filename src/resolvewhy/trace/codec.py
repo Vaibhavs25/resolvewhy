@@ -2,38 +2,54 @@ from __future__ import annotations
 
 import json
 from collections import deque
-from typing import Any, Iterable
+from collections.abc import Callable, Iterable
+from enum import Enum
+from typing import Any, Literal, TypeVar, cast
 
 from resolvewhy.model import (
     Artifact,
+    ArtifactId,
     ArtifactSelectionStatus,
     Candidate,
     CandidateCoverage,
     CandidateDomain,
+    CandidateDomainId,
     CandidateDomainScope,
+    CandidateId,
     CandidateKind,
+    ConstraintId,
     CoverageAttestation,
     CoverageAttestationKind,
     CoverageStatus,
     DependencyEdge,
+    DependencyEdgeId,
     EvaluationDomain,
+    EvaluationDomainId,
     EvaluationDomainKind,
+    EvidenceId,
     EvidenceObservation,
     EvidenceState,
     EvidenceStateKind,
+    IncompatibilityId,
     IncompatibilityObservation,
     MarkerAtom,
     MarkerExpression,
+    PolicyId,
     ProofClaim,
+    ProofClaimId,
     ProofQuantifier,
     ProofStatus,
+    ProvenanceId,
     ProvenanceKind,
     ProvenanceRecord,
     ReferenceKind,
+    RejectionId,
     RejectionObservation,
     Requirement,
+    RequirementId,
     ResolutionPolicy,
     RuntimeContext,
+    RuntimeContextId,
     SemanticConstraint,
     SemanticConstraintKind,
     SemanticLiteral,
@@ -47,6 +63,7 @@ SCHEMA = "resolvewhy-trace/1.0"
 MAX_TRACE_BYTES = 2 * 1024 * 1024
 MAX_JSON_DEPTH = 64
 MAX_JSON_NODES = 200_000
+VersionOperator = Literal["==", "!=", "<", "<=", ">", ">="]
 
 
 class TraceSerializationError(ValueError):
@@ -57,10 +74,13 @@ class TraceDecodeError(TraceSerializationError):
     """Raised when serialized input cannot be safely reconstructed."""
 
 
-def _enum(value: Any, enum_type: type, path: str) -> str:
+_Identifier = TypeVar("_Identifier")
+
+
+def _enum(value: Enum, enum_type: type[Enum], path: str) -> str:
     if not isinstance(value, enum_type):
         raise TraceSerializationError(f"{path} is not a valid {enum_type.__name__}")
-    return value.value
+    return str(value.value)
 
 
 def _require_dict(value: Any, path: str) -> dict[str, Any]:
@@ -85,6 +105,46 @@ def _optional_str(value: Any, path: str) -> str | None:
     if value is None:
         return None
     return _require_str(value, path)
+
+
+def _identifier(
+    value: Any,
+    path: str,
+    constructor: Callable[[str], _Identifier],
+) -> _Identifier:
+    """Construct a domain identifier only after validating serialized input."""
+    return constructor(_require_str(value, path))
+
+
+def _optional_identifier(
+    value: Any,
+    path: str,
+    constructor: Callable[[str], _Identifier],
+) -> _Identifier | None:
+    if value is None:
+        return None
+    return _identifier(value, path, constructor)
+
+
+def _version_operator(value: Any, path: str) -> VersionOperator:
+    operator = _require_str(value, path)
+    if operator not in {"==", "!=", "<", "<=", ">", ">="}:
+        raise TraceDecodeError(f"{path} is unsupported")
+    return cast(VersionOperator, operator)
+
+
+def _prerelease_mode(value: Any, path: str) -> Literal["allow", "disallow", "only", "unspecified"]:
+    mode = _require_str(value, path)
+    if mode not in {"allow", "disallow", "only", "unspecified"}:
+        raise TraceDecodeError(f"{path} has unsupported value: {mode!r}")
+    return cast(Literal["allow", "disallow", "only", "unspecified"], mode)
+
+
+def _universal_strategy(value: Any, path: str) -> Literal["single", "universal", "fork", "unspecified"]:
+    strategy = _require_str(value, path)
+    if strategy not in {"single", "universal", "fork", "unspecified"}:
+        raise TraceDecodeError(f"{path} has unsupported value: {strategy!r}")
+    return cast(Literal["single", "universal", "fork", "unspecified"], strategy)
 
 
 def _optional_bool(value: Any, path: str) -> bool | None:
@@ -172,12 +232,16 @@ def _deserialize_marker(value: Any, path: str) -> MarkerExpression | None:
     if obj.get("atom") is not None:
         raise TraceDecodeError(f"{path}.atom must be null for {kind} marker expressions")
     children = _require_list(obj.get("children"), f"{path}.children")
-    child_values = tuple(
-        _deserialize_marker(child, f"{path}.children[{index}]")
-        for index, child in enumerate(children)
-    )
+    child_values: list[MarkerExpression] = []
+    for index, child in enumerate(children):
+        decoded_child = _deserialize_marker(child, f"{path}.children[{index}]")
+        if decoded_child is None:
+            raise TraceDecodeError(f"{path}.children[{index}] must be a marker expression")
+        child_values.append(decoded_child)
     try:
-        return MarkerExpression(kind=kind, children=child_values)
+        return MarkerExpression(
+            kind=cast(Literal["and", "or", "not"], kind), children=tuple(child_values)
+        )
     except ValueError as exc:
         raise TraceDecodeError(f"{path} is malformed") from exc
 
@@ -209,17 +273,19 @@ def _deserialize_requirement(value: Any, path: str) -> Requirement:
     else:
         c = _require_dict(constraint_value, f"{path}.constraint")
         _check_keys(c, required=("operator", "version"), path=f"{path}.constraint")
-        operator = _require_str(c["operator"], f"{path}.constraint.operator")
-        if operator not in {"==", "!=", "<", "<=", ">", ">="}:
-            raise TraceDecodeError(f"{path}.constraint.operator is unsupported")
-        constraint = VersionConstraint(operator, _require_str(c["version"], f"{path}.constraint.version"))
+        constraint = VersionConstraint(
+            _version_operator(c["operator"], f"{path}.constraint.operator"),
+            _require_str(c["version"], f"{path}.constraint.version"),
+        )
     try:
         return Requirement(
-            id=_require_str(obj["id"], f"{path}.id"),
+            id=_identifier(obj["id"], f"{path}.id", RequirementId),
             package=_require_str(obj["package"], f"{path}.package"),
             constraint=constraint,
             raw=_optional_str(obj["raw"], f"{path}.raw"),
-            parent_candidate_ref=_optional_str(obj["parent_candidate_ref"], f"{path}.parent_candidate_ref"),
+            parent_candidate_ref=_optional_identifier(
+                obj["parent_candidate_ref"], f"{path}.parent_candidate_ref", CandidateId
+            ),
             activation=_deserialize_marker(obj["activation"], f"{path}.activation"),
             evidence_refs=tuple(
                 _deserialize_ref(item, f"{path}.evidence_refs[{index}]")
@@ -254,7 +320,7 @@ def _deserialize_candidate(value: Any, path: str) -> Candidate:
     except ValueError as exc:
         raise TraceDecodeError(f"{path}.kind has invalid candidate kind") from exc
     return Candidate(
-        id=_require_str(obj["id"], f"{path}.id"),
+        id=_identifier(obj["id"], f"{path}.id", CandidateId),
         package=_require_str(obj["package"], f"{path}.package"),
         version=_optional_str(obj["version"], f"{path}.version"),
         kind=kind,
@@ -306,8 +372,8 @@ def _deserialize_artifact(value: Any, path: str) -> Artifact:
     except ValueError as exc:
         raise TraceDecodeError(f"{path}.selection_status has invalid value") from exc
     return Artifact(
-        id=_require_str(obj["id"], f"{path}.id"),
-        candidate_ref=_require_str(obj["candidate_ref"], f"{path}.candidate_ref"),
+        id=_identifier(obj["id"], f"{path}.id", ArtifactId),
+        candidate_ref=_identifier(obj["candidate_ref"], f"{path}.candidate_ref", CandidateId),
         origin=_optional_str(obj["origin"], f"{path}.origin"),
         tags=_string_array(obj["tags"], f"{path}.tags"),
         hash=_optional_str(obj["hash"], f"{path}.hash"),
@@ -362,7 +428,7 @@ def _deserialize_runtime_context(value: Any, path: str) -> RuntimeContext:
         )
     try:
         return RuntimeContext(
-            id=_require_str(obj["id"], f"{path}.id"),
+            id=_identifier(obj["id"], f"{path}.id", RuntimeContextId),
             python_implementation=_require_str(
                 obj["python_implementation"], f"{path}.python_implementation"
             ),
@@ -397,10 +463,10 @@ def _deserialize_evaluation_domain(value: Any, path: str) -> EvaluationDomain:
         raise TraceDecodeError(f"{path}.kind has invalid value") from exc
     try:
         return EvaluationDomain(
-            id=_require_str(obj["id"], f"{path}.id"),
+            id=_identifier(obj["id"], f"{path}.id", EvaluationDomainId),
             kind=kind,
             environment_refs=tuple(
-                _require_str(item, f"{path}.environment_refs[{index}]")
+                _identifier(item, f"{path}.environment_refs[{index}]", RuntimeContextId)
                 for index, item in enumerate(
                     _require_list(obj["environment_refs"], f"{path}.environment_refs")
                 )
@@ -445,11 +511,11 @@ def _deserialize_policy(value: Any, path: str) -> ResolutionPolicy:
         ),
         path=path,
     )
-    prerelease_mode = _require_str(obj["prerelease_mode"], f"{path}.prerelease_mode")
-    universal_strategy = _require_str(obj["universal_strategy"], f"{path}.universal_strategy")
+    prerelease_mode = _prerelease_mode(obj["prerelease_mode"], f"{path}.prerelease_mode")
+    universal_strategy = _universal_strategy(obj["universal_strategy"], f"{path}.universal_strategy")
     try:
         return ResolutionPolicy(
-            id=_require_str(obj["id"], f"{path}.id"),
+            id=_identifier(obj["id"], f"{path}.id", PolicyId),
             prerelease_mode=prerelease_mode,
             source_selection=_string_array(obj["source_selection"], f"{path}.source_selection"),
             format_policy=_string_array(obj["format_policy"], f"{path}.format_policy"),
@@ -485,8 +551,8 @@ def _deserialize_candidate_domain_scope(value: Any, path: str) -> CandidateDomai
     return CandidateDomainScope(
         sources=_string_array(obj["sources"], f"{path}.sources"),
         queries=_string_array(obj["queries"], f"{path}.queries"),
-        artifact_policy_ref=_optional_str(
-            obj["artifact_policy_ref"], f"{path}.artifact_policy_ref"
+        artifact_policy_ref=_optional_identifier(
+            obj["artifact_policy_ref"], f"{path}.artifact_policy_ref", PolicyId
         ),
     )
 
@@ -578,26 +644,26 @@ def _deserialize_candidate_domain(value: Any, path: str) -> CandidateDomain:
     )
     try:
         return CandidateDomain(
-            id=_require_str(obj["id"], f"{path}.id"),
+            id=_identifier(obj["id"], f"{path}.id", CandidateDomainId),
             identifier=_require_str(obj["identifier"], f"{path}.identifier"),
             requirement_refs=tuple(
-                _require_str(item, f"{path}.requirement_refs[{index}]")
+                _identifier(item, f"{path}.requirement_refs[{index}]", RequirementId)
                 for index, item in enumerate(
                     _require_list(obj["requirement_refs"], f"{path}.requirement_refs")
                 )
             ),
             candidate_refs=tuple(
-                _require_str(item, f"{path}.candidate_refs[{index}]")
+                _identifier(item, f"{path}.candidate_refs[{index}]", CandidateId)
                 for index, item in enumerate(
                     _require_list(obj["candidate_refs"], f"{path}.candidate_refs")
                 )
             ),
             scope=_deserialize_candidate_domain_scope(obj["scope"], f"{path}.scope"),
-            runtime_context_ref=_require_str(
-                obj["runtime_context_ref"], f"{path}.runtime_context_ref"
+            runtime_context_ref=_identifier(
+                obj["runtime_context_ref"], f"{path}.runtime_context_ref", RuntimeContextId
             ),
-            resolution_policy_ref=_require_str(
-                obj["resolution_policy_ref"], f"{path}.resolution_policy_ref"
+            resolution_policy_ref=_identifier(
+                obj["resolution_policy_ref"], f"{path}.resolution_policy_ref", PolicyId
             ),
             coverage=_deserialize_coverage(obj["coverage"], f"{path}.coverage"),
         )
@@ -634,11 +700,13 @@ def _deserialize_dependency(value: Any, path: str) -> DependencyEdge:
     )
     try:
         return DependencyEdge(
-            id=_require_str(obj["id"], f"{path}.id"),
-            parent_candidate_ref=_require_str(
-                obj["parent_candidate_ref"], f"{path}.parent_candidate_ref"
+            id=_identifier(obj["id"], f"{path}.id", DependencyEdgeId),
+            parent_candidate_ref=_identifier(
+                obj["parent_candidate_ref"], f"{path}.parent_candidate_ref", CandidateId
             ),
-            requirement_ref=_require_str(obj["requirement_ref"], f"{path}.requirement_ref"),
+            requirement_ref=_identifier(
+                obj["requirement_ref"], f"{path}.requirement_ref", RequirementId
+            ),
             activation=_deserialize_marker(obj["activation"], f"{path}.activation"),
             raw_dependency=_optional_str(obj["raw_dependency"], f"{path}.raw_dependency"),
             evidence_refs=tuple(
@@ -699,10 +767,10 @@ def _deserialize_literal(value: Any, path: str) -> SemanticLiteral:
     return SemanticLiteral(
         kind=kind,
         package=_optional_str(obj["package"], f"{path}.package"),
-        candidate_ref=_optional_str(obj["candidate_ref"], f"{path}.candidate_ref"),
-        artifact_ref=_optional_str(obj["artifact_ref"], f"{path}.artifact_ref"),
-        runtime_context_ref=_optional_str(
-            obj["runtime_context_ref"], f"{path}.runtime_context_ref"
+        candidate_ref=_optional_identifier(obj["candidate_ref"], f"{path}.candidate_ref", CandidateId),
+        artifact_ref=_optional_identifier(obj["artifact_ref"], f"{path}.artifact_ref", ArtifactId),
+        runtime_context_ref=_optional_identifier(
+            obj["runtime_context_ref"], f"{path}.runtime_context_ref", RuntimeContextId
         ),
         operator=operator,
         value=literal_value,
@@ -728,7 +796,7 @@ def _deserialize_constraint(value: Any, path: str) -> SemanticConstraint:
         raise TraceDecodeError(f"{path}.kind has invalid value") from exc
     try:
         return SemanticConstraint(
-            id=_require_str(obj["id"], f"{path}.id"),
+            id=_identifier(obj["id"], f"{path}.id", ConstraintId),
             kind=kind,
             literals=tuple(
                 _deserialize_literal(item, f"{path}.literals[{index}]")
@@ -765,7 +833,7 @@ def _deserialize_evidence_observation(value: Any, path: str) -> EvidenceObservat
     except ValueError as exc:
         raise TraceDecodeError(f"{path}.state has invalid value") from exc
     return EvidenceObservation(
-        id=_require_str(obj["id"], f"{path}.id"),
+        id=_identifier(obj["id"], f"{path}.id", EvidenceId),
         kind=_require_str(obj["kind"], f"{path}.kind"),
         state=state,
         supports_refs=tuple(
@@ -834,7 +902,7 @@ def _deserialize_provenance(value: Any, path: str) -> ProvenanceRecord:
         raise TraceDecodeError(f"{path}.kind has invalid value") from exc
     try:
         return ProvenanceRecord(
-            id=_require_str(obj["id"], f"{path}.id"),
+            id=_identifier(obj["id"], f"{path}.id", ProvenanceId),
             subject_ref=_deserialize_ref(obj["subject_ref"], f"{path}.subject_ref"),
             kind=kind,
             premise_refs=tuple(
@@ -877,7 +945,7 @@ def _deserialize_rejection(value: Any, path: str) -> RejectionObservation:
     except ValueError as exc:
         raise TraceDecodeError(f"{path}.evidence_status has invalid value") from exc
     return RejectionObservation(
-        id=_require_str(obj["id"], f"{path}.id"),
+        id=_identifier(obj["id"], f"{path}.id", RejectionId),
         target_ref=_deserialize_ref(obj["target_ref"], f"{path}.target_ref"),
         reason_kind=_require_str(obj["reason_kind"], f"{path}.reason_kind"),
         source_layer=_require_str(obj["source_layer"], f"{path}.source_layer"),
@@ -907,7 +975,7 @@ def _deserialize_incompatibility(value: Any, path: str) -> IncompatibilityObserv
         path=path,
     )
     return IncompatibilityObservation(
-        id=_require_str(obj["id"], f"{path}.id"),
+        id=_identifier(obj["id"], f"{path}.id", IncompatibilityId),
         semantics=_require_str(obj["semantics"], f"{path}.semantics"),
         resolver_namespace=_require_str(
             obj["resolver_namespace"], f"{path}.resolver_namespace"
@@ -917,7 +985,7 @@ def _deserialize_incompatibility(value: Any, path: str) -> IncompatibilityObserv
             for index, item in enumerate(_require_list(obj["term_refs"], f"{path}.term_refs"))
         ),
         derivation_refs=tuple(
-            _require_str(item, f"{path}.derivation_refs[{index}]")
+            _identifier(item, f"{path}.derivation_refs[{index}]", IncompatibilityId)
             for index, item in enumerate(
                 _require_list(obj["derivation_refs"], f"{path}.derivation_refs")
             )
@@ -968,20 +1036,20 @@ def _deserialize_proof_claim(value: Any, path: str) -> ProofClaim:
     if not isinstance(subset_minimal_claim, bool):
         raise TraceDecodeError(f"{path}.subset_minimal_claim must be a boolean")
     return ProofClaim(
-        id=_require_str(obj["id"], f"{path}.id"),
-        kind=kind,
+        id=_identifier(obj["id"], f"{path}.id", ProofClaimId),
+        kind=cast(Literal["satisfiability"], kind),
         quantifier=quantifier,
-        evaluation_domain_ref=_require_str(
-            obj["evaluation_domain_ref"], f"{path}.evaluation_domain_ref"
+        evaluation_domain_ref=_identifier(
+            obj["evaluation_domain_ref"], f"{path}.evaluation_domain_ref", EvaluationDomainId
         ),
         status_claim=status_claim,
         premise_refs=tuple(
-            _require_str(item, f"{path}.premise_refs[{index}]")
+            _identifier(item, f"{path}.premise_refs[{index}]", ConstraintId)
             for index, item in enumerate(_require_list(obj["premise_refs"], f"{path}.premise_refs"))
         ),
-        branch_ref=_optional_str(obj["branch_ref"], f"{path}.branch_ref"),
+        branch_ref=_optional_identifier(obj["branch_ref"], f"{path}.branch_ref", RuntimeContextId),
         claimed_core_refs=tuple(
-            _require_str(item, f"{path}.claimed_core_refs[{index}]")
+            _identifier(item, f"{path}.claimed_core_refs[{index}]", ConstraintId)
             for index, item in enumerate(
                 _require_list(obj["claimed_core_refs"], f"{path}.claimed_core_refs")
             )

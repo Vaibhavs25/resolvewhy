@@ -11,6 +11,12 @@ sys.path.insert(0, str(ROOT / "src"))
 from packaging.requirements import Requirement
 from packaging.version import Version
 
+from resolvewhy.adapters.pip_resolvelib import (
+    AdapterContext,
+    AdapterNormalizationError,
+    DefaultPipSemantics,
+    PipResolvelibAdapter,
+)
 from resolvewhy.model import (
     CoverageAttestation,
     CoverageAttestationKind,
@@ -25,12 +31,6 @@ from resolvewhy.model import (
 )
 from resolvewhy.trace import deserialize_trace, serialize_trace
 from resolvewhy.validation import validate_trace
-from resolvewhy.adapters.pip_resolvelib import (
-    AdapterContext,
-    AdapterNormalizationError,
-    DefaultPipSemantics,
-    PipResolvelibAdapter,
-)
 
 
 @dataclass(frozen=True)
@@ -189,7 +189,7 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertNotEqual(result.trace.proof_claim.status_claim.value, "VERIFIED_UNSAT")
 
     def test_attested_candidate_coverage_is_preserved(self):
-        from resolvewhy.model import EvidenceObservation, TraceRef, ReferenceKind
+        from resolvewhy.model import EvidenceObservation, ReferenceKind, TraceRef
         attestation = CoverageAttestation(
             kind=CoverageAttestationKind.AUTHORITATIVE_FINITE_DOMAIN,
             evidence_refs=(TraceRef(ReferenceKind.EVIDENCE, "obs:external-coverage"),),
@@ -229,7 +229,7 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         )
 
     def test_attested_candidate_coverage_requires_typed_external_evidence(self):
-        from resolvewhy.model import TraceRef, ReferenceKind
+        from resolvewhy.model import ReferenceKind, TraceRef
         attestation = CoverageAttestation(
             kind=CoverageAttestationKind.AUTHORITATIVE_FINITE_DOMAIN,
             evidence_refs=(TraceRef(ReferenceKind.EVIDENCE, "obs:external-coverage"),),
@@ -299,7 +299,11 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertEqual(view.origin, "https://downloads.example/pkg-1.0.tar.gz")
 
     def test_semantically_identical_native_candidates_share_one_trace_identity(self):
-        from resolvewhy.adapters.pip_resolvelib.capture import CaptureBuffer, CapturedRun, MatchEvent
+        from resolvewhy.adapters.pip_resolvelib.capture import (
+            CaptureBuffer,
+            CapturedRun,
+            MatchEvent,
+        )
         from resolvewhy.adapters.pip_resolvelib.normalize import normalize_capture
 
         first = FakeCandidate("pkg", Version("1.0"))
@@ -422,6 +426,7 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
 
     def test_explicit_candidate_lookup_is_materialized_into_trace(self):
         from dataclasses import dataclass
+
         from resolvewhy.adapters.pip_resolvelib.capture import (
             CaptureBuffer,
             CapturedRun,
@@ -479,7 +484,10 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertEqual(validate_trace(trace), ())
 
     def test_empty_capture_refuses_to_fabricate_semantics(self):
-        from resolvewhy.adapters.pip_resolvelib.capture import CaptureBuffer, CapturedRun
+        from resolvewhy.adapters.pip_resolvelib.capture import (
+            CaptureBuffer,
+            CapturedRun,
+        )
         from resolvewhy.adapters.pip_resolvelib.normalize import normalize_capture
         captured = CapturedRun(
             buffer=CaptureBuffer(outcome=None),

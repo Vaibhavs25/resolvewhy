@@ -47,7 +47,7 @@ __all__ = [
     "RequirementEvent",
     "RequirementView",
     "RoundEvent",
-    "SemanticAccessors",
     "SatisfactionEvent",
+    "SemanticAccessors",
     "normalize_capture",
 ]

@@ -31,7 +31,7 @@ class VerificationIssue:
     ref: TraceRef | None = None
 
     @classmethod
-    def from_validation(cls, issue: ValidationIssue) -> "VerificationIssue":
+    def from_validation(cls, issue: ValidationIssue) -> VerificationIssue:
         return cls(issue.code, issue.message, issue.ref)
 
 

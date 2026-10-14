@@ -1,22 +1,47 @@
 from __future__ import annotations
 
-from dataclasses import replace
 import unittest
+from dataclasses import replace
 
 from resolvewhy.explanation import build_explanation, render_explanation
 from resolvewhy.model import (
-    Artifact, ArtifactSelectionStatus, Candidate, CandidateCoverage, CandidateDomain,
-    CandidateDomainScope, CandidateKind, CoverageAttestation, CoverageAttestationKind,
-    CoverageStatus, DependencyEdge, EvaluationDomain, EvaluationDomainKind,
-    EvidenceObservation, EvidenceState, EvidenceStateKind, MarkerAtom, MarkerExpression,
-    ProofClaim, ProofQuantifier, ProofStatus, ProvenanceKind, ProvenanceRecord,
-    ReferenceKind, Requirement, ResolutionPolicy, RuntimeContext, SemanticConstraint,
-    SemanticConstraintKind, SemanticLiteral, Trace, TraceRef, TraceScope, VerificationStatus,
+    Artifact,
+    ArtifactSelectionStatus,
+    Candidate,
+    CandidateCoverage,
+    CandidateDomain,
+    CandidateDomainScope,
+    CandidateKind,
+    CoverageAttestation,
+    CoverageAttestationKind,
+    CoverageStatus,
+    DependencyEdge,
+    EvaluationDomain,
+    EvaluationDomainKind,
+    EvidenceObservation,
+    EvidenceState,
+    EvidenceStateKind,
+    ProofClaim,
+    ProofQuantifier,
+    ProofStatus,
+    ProvenanceKind,
+    ProvenanceRecord,
+    ReferenceKind,
+    Requirement,
+    ResolutionPolicy,
+    RuntimeContext,
+    SemanticConstraint,
+    SemanticConstraintKind,
+    SemanticLiteral,
+    Trace,
+    TraceRef,
+    TraceScope,
+    VerificationStatus,
     VersionConstraint,
 )
 from resolvewhy.solving import SemanticProblem
 from resolvewhy.verification import verify
-from resolvewhy.verification.result import VerificationIssue, VerificationResult
+from resolvewhy.verification.result import VerificationIssue
 
 
 def ctx(name="py311", py="3.11", os="linux"):

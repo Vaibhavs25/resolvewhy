@@ -1,30 +1,30 @@
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from resolvewhy.model import (
     CoverageStatus,
     EvidenceStateKind,
     ProofQuantifier,
     ProofStatus,
+    ProvenanceRecord,
     ReferenceKind,
     Trace,
     VerificationStatus,
 )
-from resolvewhy.trace import SCHEMA, TraceDecodeError, deserialize_trace
-from resolvewhy.validation import validate_trace
-
-from .result import VerificationIssue, VerificationResult
+from resolvewhy.solving.core import verify_unsat_core
+from resolvewhy.solving.problem import SemanticProblem
 from resolvewhy.solving.semantics import (
     SemanticGap,
     _constraint_packages,
     _constraint_source,
     _validate_constraint_shape,
 )
-from resolvewhy.solving.problem import SemanticProblem
 from resolvewhy.solving.solver import SolveStatus, solve
-from resolvewhy.solving.core import verify_unsat_core
+from resolvewhy.trace import SCHEMA, TraceDecodeError, deserialize_trace
+from resolvewhy.validation import validate_trace
 
+from .result import VerificationIssue, VerificationResult
 
 _BLOCKING_EVIDENCE = {
     EvidenceStateKind.INCOMPLETE,
@@ -169,6 +169,7 @@ def _validate_candidate_coverage(
     trace: Trace,
     constraints,
     contexts,
+    problem: SemanticProblem,
 ) -> VerificationResult | None:
     candidate_by_id = {
         str(candidate.id): candidate
@@ -176,7 +177,7 @@ def _validate_candidate_coverage(
     }
 
     try:
-        packages = _constraint_packages(trace, constraints)
+        packages = _constraint_packages(problem, constraints)
     except SemanticGap as exc:
         if exc.code.startswith("invalid_"):
             return _invalid(
@@ -348,8 +349,7 @@ def _validate_provenance(
     trace: Trace,
     constraints,
 ) -> VerificationResult | None:
-    records = {str(record.id): record for record in trace.provenance}
-    by_subject: dict[tuple[ReferenceKind, str], list[object]] = {}
+    by_subject: dict[tuple[ReferenceKind, str], list[ProvenanceRecord]] = {}
     for record in trace.provenance:
         by_subject.setdefault(
             (record.subject_ref.kind, str(record.subject_ref.id)),
@@ -433,11 +433,12 @@ def _validate_provenance(
 def _validate_semantics(
     trace: Trace,
     constraints,
+    problem: SemanticProblem,
 ) -> VerificationResult | None:
     for constraint in constraints:
         try:
-            source = _constraint_source(trace, constraint)
-            _validate_constraint_shape(trace, constraint, source)
+            source = _constraint_source(problem, constraint)
+            _validate_constraint_shape(problem, constraint, source)
         except SemanticGap as exc:
             if exc.code.startswith("unsupported_") or exc.code.startswith("incomplete_"):
                 return _insufficient(
@@ -526,11 +527,18 @@ def verify(trace: Trace) -> VerificationResult:
     if evidence_error is not None:
         return evidence_error
 
-    semantic_error = _validate_semantics(trace, premises)
+    problem = SemanticProblem.from_trace(
+        trace,
+        premises,
+        active_contexts,
+        claim.quantifier,
+    )
+
+    semantic_error = _validate_semantics(trace, premises, problem)
     if semantic_error is not None:
         return semantic_error
 
-    coverage_error = _validate_candidate_coverage(trace, premises, active_contexts)
+    coverage_error = _validate_candidate_coverage(trace, premises, active_contexts, problem)
     if coverage_error is not None:
         return coverage_error
 
@@ -547,12 +555,6 @@ def verify(trace: Trace) -> VerificationResult:
             ),
         )
 
-    problem = SemanticProblem.from_trace(
-        trace,
-        premises,
-        active_contexts,
-        claim.quantifier,
-    )
     solve_result = solve(problem)
     if solve_result.status is SolveStatus.INVALID_PROBLEM:
         return _invalid(

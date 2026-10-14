@@ -8,12 +8,12 @@ from resolvewhy.model import (
     CandidateDomain,
     DependencyEdge,
     EvidenceState,
+    ProofQuantifier,
     Requirement,
     ResolutionPolicy,
     RuntimeContext,
     SemanticConstraint,
     Trace,
-    ProofQuantifier,
 )
 
 
@@ -45,7 +45,7 @@ class SemanticProblem:
         constraints: tuple[SemanticConstraint, ...],
         contexts: tuple[RuntimeContext, ...],
         quantifier: ProofQuantifier,
-    ) -> "SemanticProblem":
+    ) -> SemanticProblem:
         return cls(
             requirements=trace.requirements,
             candidates=trace.candidates,
@@ -62,7 +62,7 @@ class SemanticProblem:
     def with_constraints(
         self,
         constraints: tuple[SemanticConstraint, ...],
-    ) -> "SemanticProblem":
+    ) -> SemanticProblem:
         return SemanticProblem(
             requirements=self.requirements,
             candidates=self.candidates,

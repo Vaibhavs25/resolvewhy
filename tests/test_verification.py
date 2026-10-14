@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import unittest
 from dataclasses import replace
 from pathlib import Path
-import unittest
 
 from resolvewhy.model import (
     Artifact,
@@ -43,7 +43,7 @@ from resolvewhy.model import (
     VerificationStatus,
     VersionConstraint,
 )
-from resolvewhy.trace import deserialize_trace, serialize_trace
+from resolvewhy.trace import deserialize_trace
 from resolvewhy.verification import verify, verify_serialized
 
 
@@ -479,7 +479,6 @@ class ProductionVerifierTests(unittest.TestCase):
     def test_unsat_direct_version_contradiction(self):
         ctx = _ctx()
         cand = _candidate("pkg", "1.0", "one")
-        cand2 = _candidate("pkg", "2.0", "two")
         r1 = _req("pkg", ">=", "2.0", "ge")
         r2 = _req("pkg", "<", "2.0", "lt")
         c1 = _constraint(

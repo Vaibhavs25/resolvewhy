@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from resolvewhy.model import (
     CoverageStatus,
     EvidenceStateKind,
     ProofQuantifier,
+    ProvenanceRecord,
     ReferenceKind,
     Trace,
     TraceRef,
@@ -30,7 +31,10 @@ class TraceValidationError(ValueError):
 def _duplicate_issues(items: Iterable[object], kind: ReferenceKind) -> list[ValidationIssue]:
     counts: dict[str, int] = {}
     for item in items:
-        value = str(getattr(item, "id"))
+        value_id = getattr(item, "id", None)
+        if value_id is None:
+            raise TypeError(f"{kind.value} collection contains an item without an id")
+        value = str(value_id)
         counts[value] = counts.get(value, 0) + 1
 
     return [
@@ -47,7 +51,7 @@ def _duplicate_issues(items: Iterable[object], kind: ReferenceKind) -> list[Vali
 def validate_trace(trace: Trace) -> tuple[ValidationIssue, ...]:
     issues: list[ValidationIssue] = []
 
-    collections = {
+    collections: dict[ReferenceKind, Iterable[object]] = {
         ReferenceKind.RUNTIME_CONTEXT: trace.runtime_contexts,
         ReferenceKind.CANDIDATE_DOMAIN: trace.candidate_domains,
         ReferenceKind.REQUIREMENT: trace.requirements,
@@ -65,7 +69,11 @@ def validate_trace(trace: Trace) -> tuple[ValidationIssue, ...]:
         issues.extend(_duplicate_issues(items, kind))
 
     by_id = {
-        kind: {str(getattr(item, "id")) for item in items}
+        kind: {
+            str(item_id)
+            for item in items
+            if (item_id := getattr(item, "id", None)) is not None
+        }
         for kind, items in collections.items()
     }
     by_id[ReferenceKind.EVALUATION_DOMAIN] = {str(trace.evaluation_domain.id)}
@@ -360,7 +368,7 @@ def validate_trace(trace: Trace) -> tuple[ValidationIssue, ...]:
                 )
 
     # Provenance integrity and a conservative cycle check.
-    provenance_subjects: dict[TraceRef, list[object]] = {}
+    provenance_subjects: dict[TraceRef, list[ProvenanceRecord]] = {}
     for record in trace.provenance:
         require_ref(record.subject_ref)
         provenance_subjects.setdefault(record.subject_ref, []).append(record)

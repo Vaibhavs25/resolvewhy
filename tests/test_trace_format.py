@@ -3,23 +3,24 @@ from __future__ import annotations
 import copy
 import json
 import sys
+import unittest
 from dataclasses import replace
 from pathlib import Path
-import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "tests"))
 
+from test_semantic_core import valid_trace
+
 from resolvewhy.model import (
-    Candidate,
     CandidateKind,
+    EvidenceStateKind,
     IncompatibilityObservation,
+    ProofQuantifier,
+    ReferenceKind,
     RejectionObservation,
     TraceRef,
-    ReferenceKind,
-    EvidenceStateKind,
-    ProofQuantifier,
 )
 from resolvewhy.trace import (
     MAX_JSON_DEPTH,
@@ -30,8 +31,6 @@ from resolvewhy.trace import (
     deserialize_trace,
     serialize_trace,
 )
-from test_semantic_core import valid_trace
-
 
 FIXTURE = ROOT / "tests" / "fixtures" / "production_trace.json"
 
@@ -255,6 +254,22 @@ class TraceFormatTests(unittest.TestCase):
             "atom": None,
             "children": [],
         }
+        with self.assertRaises(TraceDecodeError):
+            deserialize_trace(json.dumps(payload))
+
+    def test_null_marker_child_rejected(self):
+        payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        payload["requirements"][0]["activation"] = {
+            "kind": "not",
+            "atom": None,
+            "children": [None],
+        }
+        with self.assertRaises(TraceDecodeError):
+            deserialize_trace(json.dumps(payload))
+
+    def test_blank_typed_identifier_rejected(self):
+        payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        payload["candidate_domains"][0]["candidate_refs"] = [" "]
         with self.assertRaises(TraceDecodeError):
             deserialize_trace(json.dumps(payload))
 

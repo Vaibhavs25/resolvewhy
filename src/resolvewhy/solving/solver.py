@@ -3,14 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from .problem import SemanticProblem
 from resolvewhy.model import EvidenceStateKind, ProofQuantifier
+
+from .problem import SemanticProblem
 from .semantics import (
     BranchOutcome,
     EvaluationLimit,
     SemanticGap,
-    evaluate_branch,
     _constraint_packages,
+    evaluate_branch,
 )
 
 
@@ -79,20 +80,20 @@ def _validate_problem(problem: SemanticProblem) -> tuple[SolveStatus, str, str] 
     for domain in problem.candidate_domains:
         if str(domain.resolution_policy_ref) != str(problem.resolution_policy.id):
             return SolveStatus.INVALID_PROBLEM, "invalid_coverage_reference", f"candidate domain {domain.id} uses a different resolution policy"
-        for ref in domain.candidate_refs:
-            candidate = candidate_by_id.get(str(ref))
+        for candidate_ref in domain.candidate_refs:
+            candidate = candidate_by_id.get(str(candidate_ref))
             if candidate is None:
-                return SolveStatus.INVALID_PROBLEM, "invalid_candidate_domain", f"candidate domain {domain.id} references missing candidate {ref}"
+                return SolveStatus.INVALID_PROBLEM, "invalid_candidate_domain", f"candidate domain {domain.id} references missing candidate {candidate_ref}"
             if candidate.package != domain.identifier:
-                return SolveStatus.INVALID_PROBLEM, "invalid_candidate_domain", f"candidate {ref} does not belong to domain {domain.identifier!r}"
+                return SolveStatus.INVALID_PROBLEM, "invalid_candidate_domain", f"candidate {candidate_ref} does not belong to domain {domain.identifier!r}"
         if domain.coverage.status.value != "complete":
             continue
         if domain.coverage.attestation is None:
             return SolveStatus.INVALID_PROBLEM, "invalid_coverage_attestation", f"complete candidate domain {domain.id} lacks attestation"
-        for ref in domain.coverage.attestation.evidence_refs:
-            observation = evidence_by_id.get(str(ref.id))
+        for evidence_ref in domain.coverage.attestation.evidence_refs:
+            observation = evidence_by_id.get(str(evidence_ref.id))
             if observation is None:
-                return SolveStatus.INVALID_PROBLEM, "invalid_coverage_attestation", f"candidate domain {domain.id} references missing evidence {ref.id}"
+                return SolveStatus.INVALID_PROBLEM, "invalid_coverage_attestation", f"candidate domain {domain.id} references missing evidence {evidence_ref.id}"
             if observation.state in {EvidenceStateKind.INCOMPLETE, EvidenceStateKind.MISSING, EvidenceStateKind.UNKNOWN}:
                 return SolveStatus.INSUFFICIENT_EVIDENCE, "incomplete_candidate_coverage", f"coverage evidence {observation.id} is {observation.state.value}"
             if not any(
