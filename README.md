@@ -57,7 +57,11 @@ reinterpret as resolver results.
 
 **Phase 2 — Production Trace Format:** complete as `resolvewhy-trace/1.0`.
 
-**Phase 3A — pip/resolvelib Adapter:** implemented and validated. The production suite and the Windows production CI both pass 75/75, including the controlled pip/resolvelib integration paths.
+**Phase 3A — pip/resolvelib Adapter:** implemented and covered by controlled
+pip/resolvelib integration tests. The CI workflow runs the production suite,
+research tests, and reproducibility harness on the supported Linux and Windows
+Python versions. These checks validate the declared finite implementation; they
+do not establish general resolver correctness.
 
 **Phase 4A — Production Independent Verifier:** implemented for the declared finite semantic fragment. The verifier independently reconstructs and evaluates production `resolvewhy-trace/1.0` traces and returns typed `VERIFIED_SAT`, `VERIFIED_UNSAT`, `INSUFFICIENT_EVIDENCE`, or `INVALID_TRACE` results. It does not import the research verifier or depend on a resolver.
 
