@@ -1,0 +1,5 @@
+# Reproducible release-candidate build and artifact-validation tooling.
+# The build backend is pinned separately in pyproject.toml.
+pip==26.2.1
+build==1.6.1
+twine==7.0.0

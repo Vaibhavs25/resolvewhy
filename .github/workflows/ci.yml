@@ -79,8 +79,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install packaging tools
-        run: python -m pip install --upgrade pip build twine
+      - name: Install pinned packaging tools
+        run: python -m pip install -r packaging-requirements.txt
       - name: Build and validate artifacts
         run: |
           python -m build --outdir dist
@@ -88,6 +88,7 @@ jobs:
       - name: Smoke-test wheel outside the checkout
         run: |
           python -m venv .artifact-wheel
+          .artifact-wheel/bin/python -m pip install "pip==26.2.1"
           wheel=$(echo dist/*.whl)
           .artifact-wheel/bin/python -m pip install "${wheel}[pip-resolvelib]"
           expected_version=$(python -c 'import pathlib, re; match = re.search(r"^version\s*=\s*\"([^\"]+)\"", pathlib.Path("pyproject.toml").read_text(), re.M); assert match; print(match.group(1))')
@@ -100,6 +101,7 @@ jobs:
       - name: Smoke-test source distribution outside the checkout
         run: |
           python -m venv .artifact-sdist
+          .artifact-sdist/bin/python -m pip install "pip==26.2.1"
           sdist=$(echo dist/*.tar.gz)
           .artifact-sdist/bin/python -m pip install "${sdist}[pip-resolvelib]"
           expected_version=$(python -c 'import pathlib, re; match = re.search(r"^version\s*=\s*\"([^\"]+)\"", pathlib.Path("pyproject.toml").read_text(), re.M); assert match; print(match.group(1))')

@@ -1,13 +1,13 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools==84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "resolvewhy"
-version = "0.1.0.dev0"
+version = "0.1.0rc1"
 description = "Independently verifiable dependency-resolution explanations"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 
 [project.optional-dependencies]
 pip-resolvelib = [

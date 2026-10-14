@@ -1,8 +1,9 @@
 # Public API and diagnostic contract
 
-This document defines the intended Python API for the current `0.1.0.dev0`
-package. It describes a bounded verification library, not a package resolver,
-CLI, HTTP service, or ecosystem-wide resolver interface.
+This document defines the intended Python API for the proposed `0.1.0rc1`
+release candidate. It supports Python 3.10, 3.11, and 3.12. It describes a
+bounded verification library, not a package resolver, CLI, HTTP service, or
+ecosystem-wide resolver interface.
 
 ## Supported modules
 
@@ -88,9 +89,9 @@ remain readable only when they meet the current validation and security limits.
 No automatic schema migration is performed.
 
 Before a `1.0` package release, Resolvewhy makes no cross-release compatibility
-guarantee beyond the documented `resolvewhy-trace/1.0` schema and the current
-supported Python versions. Changes to this named Python surface should be
-additive where practical. Any removal or material semantic change requires a
+guarantee beyond the documented `resolvewhy-trace/1.0` schema and Python 3.10,
+3.11, and 3.12 for this candidate. Changes to this named Python surface should
+be additive where practical. Any removal or material semantic change requires a
 documented deprecation notice in a release before it is removed, except where a
 security fix must fail closed. New trace schemas require a new schema identifier
 and an explicit compatibility statement; they must not silently reinterpret

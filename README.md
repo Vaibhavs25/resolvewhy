@@ -2,6 +2,13 @@
 
 Research prototype for formally verified explanations of dependency-resolution failures from structured evidence.
 
+## Release-candidate support
+
+The proposed `0.1.0rc1` bounded library candidate supports Python 3.10, 3.11,
+and 3.12. Python 3.13 and later are not declared supported by this candidate.
+This scope does not establish a general package resolver, universal resolver
+compatibility, a hosted service, or general production readiness.
+
 ## Installation and quick start
 
 Install the production semantic core from a checkout:
