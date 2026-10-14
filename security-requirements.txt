@@ -1,0 +1,3 @@
+# Security tooling is isolated from Resolvewhy's runtime environments.
+bandit==1.9.4
+pip-audit==2.10.1

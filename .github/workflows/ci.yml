@@ -95,3 +95,37 @@ jobs:
             "$GITHUB_WORKSPACE/.artifact-sdist/bin/python" \
             "$GITHUB_WORKSPACE/tests/packaging_smoke.py"
           "$GITHUB_WORKSPACE/.artifact-sdist/bin/python" -m pip check
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned security tools
+        run: python -m pip install --upgrade pip -r security-requirements.txt
+      - name: Static security analysis
+        run: python -m bandit -r src
+      - name: Audit base runtime dependencies
+        run: |
+          python -m venv .security-runtime
+          .security-runtime/bin/python -m pip install --upgrade pip
+          .security-runtime/bin/python -m pip install -e .
+          .security-runtime/bin/python -m pip list --format=freeze > .security-runtime-freeze.txt
+          grep -E -v '^(resolvewhy|pip|setuptools)==' .security-runtime-freeze.txt > .security-runtime-third-party.txt || true
+          if [ -s .security-runtime-third-party.txt ]; then
+            python -m pip_audit --strict --progress-spinner off -r .security-runtime-third-party.txt
+          else
+            echo "No third-party base runtime dependencies to audit."
+          fi
+          .security-runtime/bin/python -m pip check
+      - name: Audit optional pip-resolvelib dependencies
+        run: |
+          python -m venv .security-pip-resolvelib
+          .security-pip-resolvelib/bin/python -m pip install --upgrade pip
+          .security-pip-resolvelib/bin/python -m pip install -e ".[pip-resolvelib]"
+          .security-pip-resolvelib/bin/python -m pip list --format=freeze > .security-pip-resolvelib-freeze.txt
+          grep -E -v '^(resolvewhy|pip|setuptools)==' .security-pip-resolvelib-freeze.txt > .security-pip-resolvelib-third-party.txt || true
+          python -m pip_audit --strict --progress-spinner off -r .security-pip-resolvelib-third-party.txt
+          .security-pip-resolvelib/bin/python -m pip check

@@ -141,8 +141,8 @@ def _read_first_attr(obj: object, names: tuple[str, ...]) -> object | None:
     for name in names:
         try:
             value = getattr(obj, name)
-        except Exception:  # noqa: BLE001, S112 — resolver properties may raise arbitrary errors; skip unreadable values.
-            continue
+        except Exception:  # noqa: BLE001 — resolver properties may raise arbitrary errors.
+            value = None
         if value is not None:
             return value
     return None

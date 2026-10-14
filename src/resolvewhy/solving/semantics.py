@@ -119,7 +119,11 @@ def eval_marker(marker: MarkerExpression | None, context: RuntimeContext) -> boo
 
     def evaluate(expr: MarkerExpression) -> bool:
         if expr.kind == "atom":
-            assert expr.atom is not None
+            if expr.atom is None or expr.children:
+                raise SemanticGap(
+                    "invalid_marker_expression",
+                    "atom marker expression is structurally incomplete",
+                )
             variable = expr.atom.variable
             op = expr.atom.operator
             value = expr.atom.value
@@ -141,10 +145,25 @@ def eval_marker(marker: MarkerExpression | None, context: RuntimeContext) -> boo
             )
 
         if expr.kind == "not":
+            if expr.atom is not None or len(expr.children) != 1:
+                raise SemanticGap(
+                    "invalid_marker_expression",
+                    "not marker expression must have exactly one child",
+                )
             return not evaluate(expr.children[0])
         if expr.kind == "and":
+            if expr.atom is not None or not expr.children:
+                raise SemanticGap(
+                    "invalid_marker_expression",
+                    "and marker expression must have child expressions",
+                )
             return all(evaluate(child) for child in expr.children)
         if expr.kind == "or":
+            if expr.atom is not None or not expr.children:
+                raise SemanticGap(
+                    "invalid_marker_expression",
+                    "or marker expression must have child expressions",
+                )
             return any(evaluate(child) for child in expr.children)
         raise SemanticGap(
             "unsupported_marker_semantics",
@@ -209,7 +228,11 @@ def _candidate_allowed(candidate: Candidate, policy: ResolutionPolicy) -> tuple[
     state = _candidate_version_state(candidate, policy)
     if not state.known:
         return False, True
-    assert candidate.version is not None
+    if candidate.version is None:
+        raise SemanticGap(
+            "incomplete_candidate_metadata",
+            f"candidate {candidate.id} has no version metadata",
+        )
     version = parse_version(candidate.version)
     is_prerelease = version.pre_rank < 3
     if policy.prerelease_mode == "disallow" and is_prerelease:
@@ -600,7 +623,11 @@ def _check_constraint(
 
     if constraint.kind is SemanticConstraintKind.REQUIREMENT:
         requirement = source
-        assert isinstance(requirement, Requirement)
+        if not isinstance(requirement, Requirement):
+            raise SemanticGap(
+                "invalid_semantic_binding",
+                f"requirement constraint {constraint.id} has a non-requirement source",
+            )
         selected = assignment.get(requirement.package)
         for literal in constraint.literals:
             if not _constraint_applies(problem, constraint, literal, context):
@@ -622,7 +649,11 @@ def _check_constraint(
 
     if constraint.kind is SemanticConstraintKind.DEPENDENCY:
         dependency = source
-        assert isinstance(dependency, DependencyEdge)
+        if not isinstance(dependency, DependencyEdge):
+            raise SemanticGap(
+                "invalid_semantic_binding",
+                f"dependency constraint {constraint.id} has a non-dependency source",
+            )
         parent = next(
             candidate
             for candidate in problem.candidates

@@ -196,7 +196,8 @@ def _serialize_marker(marker: MarkerExpression | None) -> dict[str, Any] | None:
         return None
     result: dict[str, Any] = {"kind": marker.kind}
     if marker.kind == "atom":
-        assert marker.atom is not None
+        if marker.atom is None:
+            raise TraceSerializationError("atom marker expression is missing its atom")
         result["atom"] = {
             "variable": marker.atom.variable,
             "operator": marker.atom.operator,
@@ -1230,6 +1231,119 @@ def _check_shape_limits(root: Any) -> None:
             queue.extend((child, depth + 1) for child in value)
 
 
+def _precheck_json_limits(raw: bytes) -> None:
+    """Reject excessive JSON structure before ``json.loads`` allocates it.
+
+    This is deliberately a small structural scanner, not a second JSON parser.
+    The standard decoder remains authoritative for JSON syntax and Unicode.  The
+    scanner only counts JSON values and nesting outside quoted strings, which
+    lets the byte, depth, and node limits fail before decoder recursion and
+    materialization for otherwise valid hostile input.
+    """
+    whitespace = b" \t\r\n"
+    stack: list[list[str]] = []
+    index = 0
+    nodes = 0
+    root_complete = False
+
+    def count_value(depth: int) -> None:
+        nonlocal nodes
+        if depth > MAX_JSON_DEPTH:
+            raise TraceDecodeError("trace exceeds maximum JSON nesting depth")
+        nodes += 1
+        if nodes > MAX_JSON_NODES:
+            raise TraceDecodeError("trace exceeds maximum JSON node count")
+
+    def finish_parent_value() -> None:
+        nonlocal root_complete
+        if not stack:
+            root_complete = True
+        elif stack[-1][0] == "array":
+            stack[-1][1] = "comma_or_end"
+        else:
+            stack[-1][1] = "comma_or_end"
+
+    def skip_string(position: int) -> int:
+        position += 1
+        while position < len(raw):
+            byte = raw[position]
+            if byte == 0x5C:  # backslash
+                position += 2
+                continue
+            if byte == 0x22:  # quote
+                return position + 1
+            position += 1
+        return position
+
+    while index < len(raw):
+        byte = raw[index]
+        if byte in whitespace:
+            index += 1
+            continue
+
+        phase = stack[-1][1] if stack else ("done" if root_complete else "value")
+        if phase == "key_or_end":
+            if byte == 0x7D:  # }
+                stack.pop()
+                if not stack:
+                    root_complete = True
+                index += 1
+                continue
+            if byte == 0x22:
+                stack[-1][1] = "colon"
+                index = skip_string(index)
+                continue
+            # Leave malformed syntax to json.loads, while avoiding a loop.
+            index += 1
+            continue
+        if phase == "colon":
+            if byte == 0x3A:  # :
+                stack[-1][1] = "value"
+            index += 1
+            continue
+        if phase == "comma_or_end":
+            if byte == 0x2C:  # ,
+                stack[-1][1] = "value_or_end" if stack[-1][0] == "array" else "key_or_end"
+            elif byte in {0x5D, 0x7D}:  # ] or }
+                stack.pop()
+                if not stack:
+                    root_complete = True
+            index += 1
+            continue
+        if phase == "value_or_end" and byte == 0x5D:  # ]
+            stack.pop()
+            if not stack:
+                root_complete = True
+            index += 1
+            continue
+        if phase not in {"value", "value_or_end"}:
+            index += 1
+            continue
+
+        value_depth = len(stack) + 1
+        if byte == 0x7B:  # {
+            count_value(value_depth)
+            finish_parent_value()
+            stack.append(["object", "key_or_end"])
+            index += 1
+        elif byte == 0x5B:  # [
+            count_value(value_depth)
+            finish_parent_value()
+            stack.append(["array", "value_or_end"])
+            index += 1
+        elif byte == 0x22:
+            count_value(value_depth)
+            finish_parent_value()
+            index = skip_string(index)
+        elif byte not in {0x5D, 0x7D, 0x2C, 0x3A}:
+            count_value(value_depth)
+            finish_parent_value()
+            while index < len(raw) and raw[index] not in b" \t\r\n,]}":
+                index += 1
+        else:
+            index += 1
+
+
 def _parse_json(data: str | bytes | bytearray) -> dict[str, Any]:
     if isinstance(data, str):
         raw = data.encode("utf-8")
@@ -1241,6 +1355,7 @@ def _parse_json(data: str | bytes | bytearray) -> dict[str, Any]:
         raise TraceDecodeError(
             f"trace exceeds maximum size of {MAX_TRACE_BYTES} bytes"
         )
+    _precheck_json_limits(raw)
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:

@@ -6,6 +6,7 @@ import sys
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -24,6 +25,7 @@ from resolvewhy.model import (
 )
 from resolvewhy.trace import (
     MAX_JSON_DEPTH,
+    MAX_JSON_NODES,
     MAX_TRACE_BYTES,
     SCHEMA,
     TraceDecodeError,
@@ -339,6 +341,26 @@ class TraceFormatTests(unittest.TestCase):
         nested = "[" * (MAX_JSON_DEPTH + 1) + "]" * (MAX_JSON_DEPTH + 1)
         with self.assertRaises(TraceDecodeError):
             deserialize_trace(nested)
+
+    def test_excessive_depth_is_rejected_before_json_decoding(self):
+        from resolvewhy.trace import codec
+
+        nested = b"[" * (MAX_JSON_DEPTH + 1) + b"]" * (MAX_JSON_DEPTH + 1)
+        with (
+            patch.object(codec.json, "loads", side_effect=AssertionError("decoder reached")),
+            self.assertRaisesRegex(TraceDecodeError, "nesting depth"),
+        ):
+            deserialize_trace(nested)
+
+    def test_json_node_limit_has_exact_boundary(self):
+        # The root list contributes one node, so this has exactly MAX_JSON_NODES.
+        at_limit = b"[" + b"0," * (MAX_JSON_NODES - 2) + b"0]"
+        with self.assertRaisesRegex(TraceDecodeError, "top-level trace"):
+            deserialize_trace(at_limit)
+
+        one_over = b"[" + b"0," * (MAX_JSON_NODES - 1) + b"0]"
+        with self.assertRaisesRegex(TraceDecodeError, "node count"):
+            deserialize_trace(one_over)
 
     def test_serializer_rejects_invalid_model_graph(self):
         trace = valid_trace()

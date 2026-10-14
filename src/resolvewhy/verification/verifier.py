@@ -585,15 +585,28 @@ def verify(trace: Trace) -> VerificationResult:
 
     core_ids = tuple(str(item) for item in claim.claimed_core_refs)
     core_verified: bool | None = None
-    if core_ids:
+    core_check = None
+    if core_ids or claim.subset_minimal_claim:
         core_check = verify_unsat_core(problem, core_ids)
-        core_verified = core_check.verified
-        if not core_verified:
+        if core_check.reason == "core_evaluation_limit":
+            return _insufficient(
+                trace,
+                reason="core_evaluation_limit",
+                message="the claimed core exceeded the bounded verification budget",
+            )
+        if core_ids:
+            core_verified = core_check.verified
+        if core_ids and not core_verified:
             reasons.append("core_not_verified")
 
     minimality_verified: bool | None = None
     if claim.subset_minimal_claim:
-        core_check = verify_unsat_core(problem, core_ids)
+        if core_check is None:
+            return _insufficient(
+                trace,
+                reason="core_evaluation_limit",
+                message="the claimed subset-minimal core could not be checked",
+            )
         minimality_verified = core_check.verified
         if not minimality_verified:
             reasons.append("minimality_not_verified")

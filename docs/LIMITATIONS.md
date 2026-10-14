@@ -16,3 +16,8 @@ Resolvewhy is a bounded verification library, not a general package resolver.
 - The package is not production-ready until the acceptance contract in
   `docs/PRODUCTION_READINESS.md` has no mandatory FAIL, BLOCKED, or NOT TESTED
   entries.
+- The documented security envelope is bounded: traces are limited to 2 MiB,
+  JSON depth 64, and 200,000 values; branch solving is capped at 100,000
+  states; subset-minimal core checking is capped at 128 solver calls.  These
+  limits produce invalid or inconclusive outcomes rather than a verified
+  result, but they are not a throughput guarantee for arbitrary large graphs.

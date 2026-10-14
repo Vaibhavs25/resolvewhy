@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from dataclasses import replace
+from unittest.mock import patch
 
 import tests.test_verification as verification_fixtures
 from resolvewhy.model import (
@@ -19,12 +20,15 @@ from resolvewhy.model import (
     TraceRef,
 )
 from resolvewhy.solving import (
+    MAX_CORE_SOLVE_ATTEMPTS,
     SemanticProblem,
     SolveStatus,
     minimal_unsat_core,
     solve,
     verify_unsat_core,
 )
+from resolvewhy.solving.core import CoreVerificationResult
+from resolvewhy.solving.semantics import EvaluationLimit, evaluate_branch
 from resolvewhy.verification import verify
 from resolvewhy.verification.result import VerificationStatus
 from tests.test_verification import (
@@ -105,6 +109,60 @@ class SolverTests(unittest.TestCase):
         self.assertFalse(result.verified)
         self.assertTrue(result.unsat_verified)
         self.assertEqual(result.reason, "deletion_not_sat")
+
+    def test_core_verification_budget_returns_inconclusive(self):
+        trace = verification_fixtures.ProductionVerifierTests()._unsat_three_constraints_fixture()
+        problem = self._problem(trace)
+        result = verify_unsat_core(
+            problem,
+            tuple(item.id for item in trace.semantic_constraints),
+            max_solve_attempts=1,
+        )
+        self.assertFalse(result.verified)
+        self.assertEqual(result.reason, "core_evaluation_limit")
+
+        minimal = minimal_unsat_core(
+            problem,
+            tuple(item.id for item in trace.semantic_constraints),
+            max_solve_attempts=1,
+        )
+        self.assertEqual(minimal.status, SolveStatus.INSUFFICIENT_EVIDENCE)
+        self.assertEqual(minimal.reason, "core_evaluation_limit")
+
+    def test_evaluation_budget_exhaustion_is_explicit(self):
+        trace = verification_fixtures.ProductionVerifierTests()._unsat_three_constraints_fixture()
+        problem = self._problem(trace)
+        with self.assertRaises(EvaluationLimit) as raised:
+            evaluate_branch(
+                problem,
+                problem.semantic_constraints,
+                problem.runtime_contexts[0],
+                max_states=0,
+            )
+        self.assertEqual(raised.exception.code, "evaluation_search_limit")
+
+    def test_default_core_budget_is_documented(self):
+        self.assertEqual(MAX_CORE_SOLVE_ATTEMPTS, 128)
+
+    def test_claimed_core_limit_is_not_reported_as_verified(self):
+        trace = verification_fixtures.ProductionVerifierTests()._unsat_three_constraints_fixture()
+        trace = replace(
+            trace,
+            proof_claim=replace(
+                trace.proof_claim,
+                claimed_core_refs=tuple(item.id for item in trace.semantic_constraints),
+            ),
+        )
+        limited = CoreVerificationResult(
+            verified=False,
+            core_ids=tuple(str(item.id) for item in trace.semantic_constraints),
+            unsat_verified=True,
+            reason="core_evaluation_limit",
+        )
+        with patch("resolvewhy.verification.verifier.verify_unsat_core", return_value=limited):
+            result = verify(trace)
+        self.assertEqual(result.status, VerificationStatus.INSUFFICIENT_EVIDENCE)
+        self.assertEqual(result.reasons, ("core_evaluation_limit",))
 
     def test_incorrect_supplied_core_rejected(self):
         trace = verification_fixtures.ProductionVerifierTests()._unsat_three_constraints_fixture()

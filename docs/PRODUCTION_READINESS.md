@@ -17,11 +17,11 @@ Status values are deliberately limited to `PASS`, `FAIL`, `BLOCKED`, and
 | Public API | Typed result categories and stable error classes are documented and tested | package exports, verification result tests | FAIL: API stability policy and type-clean surface remain incomplete |
 | Error handling | Timeout, unsupported semantics, invalid evidence, and internal failures remain distinguishable | verifier result model and adapter tests | PASS for tested categories |
 | Security limits | Input size, JSON depth/node count, and evaluation search limits are enforced | codec/solver limits and adversarial tests | PASS for implemented limits; broader threat review remains required |
-| Packaging | Wheel and source distribution build; clean installs work outside the checkout | packaging checks and isolated smoke test | BLOCKED: source-distribution and clean-environment evidence must be recorded |
+| Packaging | Wheel and source distribution build; clean installs work outside the checkout | [CI run 38548052099](https://github.com/Vaibhavs25/resolvewhy/actions/runs/38548052099): wheel and sdist validation, external clean installs, smoke tests, and `pip check` on Python 3.10–3.12 | PASS |
 | Cross-platform | Linux and Windows Python 3.10–3.12 run the required suites | GitHub Actions CI | PASS for current commit |
 | Performance | Bounded execution under documented limits and representative stress cases | solver search limit; stress evidence | NOT TESTED |
 | Documentation | Installation, API, limitations, research boundary, and support policy match implementation | README, docs, SECURITY.md | FAIL until this contract is fully synchronized |
-| CI/release reproducibility | Quality, package, security, and test gates run on every supported platform | `.github/workflows/ci.yml` | FAIL: lint/type/package/security gates are incomplete |
+| CI/release reproducibility | Quality, package, security, and test gates run on every supported platform | `.github/workflows/ci.yml`; Linux/Windows test matrices and artifact validation passed in CI run 38548052099; security gate is defined but requires CI execution on its publishing commit | BLOCKED: pending security-job CI evidence |
 | Observability/support | Failures expose actionable typed diagnostics without leaking sensitive input | result/issue models and security policy | NOT TESTED |
 
 ## Release rule
