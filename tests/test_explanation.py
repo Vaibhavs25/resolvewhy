@@ -96,7 +96,7 @@ def make_trace(*, unsat=False, incomplete=False, dependency=False, artifact=Fals
     prov=tuple(ProvenanceRecord(f"prov:{x.id}",TraceRef(ReferenceKind.CONSTRAINT,str(x.id)),ProvenanceKind.DIRECT) for x in constraints)
     return Trace("resolvewhy-trace/1.0","test-resolver","1.0",None,TraceScope.SINGLE_ENVIRONMENT,
         (c,),ed,ResolutionPolicy("policy:test",prerelease_mode="disallow",universal_strategy="single"),
-        tuple(domains),tuple(requirements),(a,),arts,deps,(),(),constraints,ev,prov,claim)
+        tuple(domains),tuple(requirements),((a,b) if unsat else (a,)),arts,deps,(),(),constraints,ev,prov,claim)
 
 
 def problem_for(trace):

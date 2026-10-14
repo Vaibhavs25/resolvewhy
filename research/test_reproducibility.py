@@ -176,6 +176,9 @@ class TraceOnlyTests(unittest.TestCase):
         observed = {x["case_id"]: verifier.verify(x["trace"])[0] for x in results}
         self.assertEqual(observed, expected)
 
+    def test_archived_corpus_is_loadable_and_matches_constructors(self):
+        self.assertEqual(runner.load_corpus(), verifier.corpus_cases())
+
     def test_coverage_mutation_campaign(self):
         _, false_accepts, counts, taxonomy = runner.mutation_campaign(verifier)
         self.assertEqual(false_accepts, 0)

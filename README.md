@@ -2,6 +2,48 @@
 
 Research prototype for formally verified explanations of dependency-resolution failures from structured evidence.
 
+## Installation and quick start
+
+Install the production semantic core from a checkout:
+
+```bash
+python -m pip install .
+```
+
+Install the optional pip/resolvelib adapter dependencies when using that
+adapter or its integration tests:
+
+```bash
+python -m pip install ".[pip-resolvelib]"
+```
+
+The canonical production fixture can be decoded, independently verified, and
+rendered without invoking a package resolver:
+
+```python
+from pathlib import Path
+
+from resolvewhy.explanation import build_explanation, render_explanation
+from resolvewhy.solving import SemanticProblem
+from resolvewhy.trace import deserialize_trace
+from resolvewhy.verification import verify
+
+trace = deserialize_trace(Path("tests/fixtures/production_trace.json").read_bytes())
+result = verify(trace)
+problem = SemanticProblem.from_trace(
+    trace,
+    trace.semantic_constraints,
+    trace.runtime_contexts,
+    trace.proof_claim.quantifier,
+)
+print(render_explanation(build_explanation(problem, result)))
+```
+
+Only `VERIFIED_SAT` and `VERIFIED_UNSAT` results are independently
+established within the declared finite fragment. `INSUFFICIENT_EVIDENCE` and
+`INVALID_TRACE` are conservative outcomes, not failed proof attempts to
+reinterpret as resolver results.
+
 ## Research status
 
 **Technical validation:** complete for the declared finite semantic fragment.
@@ -120,6 +162,12 @@ The explicit research tests are:
 python -m unittest research.test_reproducibility
 ```
 
+Run the production tests with:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
 The current suite computes 18/18 deterministic serialized-fixture replay, 18/18 round trips, 18/18 hermetic replays, 2 executable subset-minimality checks, 250 mutation cases with zero false verified-proof acceptances, and 256 projection worlds with zero post-repair collisions.
 
 The 18-case replay is a deterministic serialized semantic fixture replay of the documented corpus classifications. It is not a fresh execution of all historical public resolver incidents. See `research/REPRODUCIBILITY_README.md` and `research/REPRODUCIBILITY_INDEX.md` for the exact evidence boundary.
@@ -149,3 +197,9 @@ The repository preserves earlier research documents so that discovered defects a
 This repository is a research record. It does not claim a production resolver, ecosystem standard, maintainer endorsement, or production readiness.
 
 **Phase 5 — Human Explanation Layer:** implemented and tested for already independently verified semantic results. The deterministic explanation layer renders verified SAT/UNSAT, insufficient-evidence, and invalid-trace outcomes without trusting resolver diagnostics or establishing new proof claims. See docs/PRODUCTION_EXPLANATION.md.
+
+## Development and contributions
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, required
+checks, and rules for preserving the project's verification and research
+boundaries.

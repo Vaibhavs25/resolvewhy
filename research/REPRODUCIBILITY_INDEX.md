@@ -130,10 +130,10 @@ The explicit tests cover SAT/UNSAT reconstruction, subset-minimality, serializat
 
 ## Fixture provenance
 
-The 18-case fixture archive is stored in `research/fixtures/trace_corpus.py` as a deterministic compressed payload protected by SHA-256:
+The 18-case fixture archive is stored in `research/fixtures/trace_corpus.py` as a deterministic compressed payload protected by SHA-256. Its UTF-8 source is the checked-in finite corpus constructors, serialized with sorted keys, two-space indentation, and a trailing newline:
 
 ```
-88cadf682c2a7c7d3c91c861e8cc673c92f17134f2a4091b46bafda3b733f8bb
+91d7a7e4d63030f8fcb553acc6e16533956bede227ed8c0983d25cf0777f857b
 ```
 
 The fixture cases correspond to classifications documented in `research/REAL_WORLD_TRACE_CORPUS.md`. They are replay evidence, not a substitute for rerunning the historical resolver incidents.

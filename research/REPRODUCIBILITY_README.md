@@ -90,7 +90,7 @@ Those remain separate research evidence classes.
 
 ## Fixture provenance
 
-The 18-case fixture archive is stored in `research/fixtures/trace_corpus.py` as a deterministic compressed payload with an SHA-256 checksum. The fixture cases correspond to the classifications documented in `research/REAL_WORLD_TRACE_CORPUS.md`.
+The 18-case fixture archive is stored in `research/fixtures/trace_corpus.py` as a deterministic compressed payload with an SHA-256 checksum. Its UTF-8 source is the checked-in finite corpus constructors, serialized with sorted keys, two-space indentation, and a trailing newline. The fixture cases correspond to the classifications documented in `research/REAL_WORLD_TRACE_CORPUS.md`.
 
 The fixture is deliberately treated as evidence to replay, not as a substitute for re-running the historical resolver incidents.
 
