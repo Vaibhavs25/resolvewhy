@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Generic, TypeVar
 
 from resolvewhy.model import Trace
@@ -18,8 +19,20 @@ RT = TypeVar("RT")
 CT = TypeVar("CT")
 
 
+class AdapterFailureCode(str, Enum):
+    """Stable machine-readable codes for adapter construction/execution errors."""
+
+    OPTIONAL_DEPENDENCY_MISSING = "optional_dependency_missing"
+    UNSUPPORTED_RESOLVER_INTERFACE = "unsupported_resolver_interface"
+    EXECUTION_FAILED = "adapter_execution_failed"
+
+
 class AdapterExecutionError(RuntimeError):
-    """Raised when the resolver cannot produce a supported capture outcome."""
+    """Raised when the adapter cannot produce a supported capture outcome."""
+
+    def __init__(self, code: AdapterFailureCode, message: str) -> None:
+        self.code = code
+        super().__init__(message)
 
 
 @dataclass(frozen=True)
@@ -78,6 +91,7 @@ class PipResolvelibAdapter(Generic[RT, CT]):
             import resolvelib
         except ImportError as exc:
             raise AdapterExecutionError(
+                AdapterFailureCode.OPTIONAL_DEPENDENCY_MISSING,
                 "resolvelib is not installed; install the optional "
                 "'resolvewhy[pip-resolvelib]' dependency"
             ) from exc
@@ -125,6 +139,7 @@ class PipResolvelibAdapter(Generic[RT, CT]):
         resolution_impossible = getattr(resolver_module, "ResolutionImpossible", None)
         if resolver_cls is None or reporter_cls is None or resolution_impossible is None:
             raise AdapterExecutionError(
+                AdapterFailureCode.UNSUPPORTED_RESOLVER_INTERFACE,
                 "resolver module does not expose the required public resolvelib surface"
             )
         if reporter is None:
@@ -184,9 +199,15 @@ class PipResolvelibAdapter(Generic[RT, CT]):
                 resolver_result=None,
                 native_error=exc,
             )
-        except Exception:
-            # Unknown resolver failures must not be relabeled as UNSAT.
-            raise
+        except Exception as exc:
+            # Unknown resolver failures must not be relabeled as UNSAT or be
+            # exposed as arbitrary provider diagnostics.  The chained cause is
+            # available to the direct caller for local debugging; the stable
+            # public code remains safe to report.
+            raise AdapterExecutionError(
+                AdapterFailureCode.EXECUTION_FAILED,
+                "resolver execution failed before a supported capture outcome",
+            ) from exc
 
         buffer.outcome = "resolved"
         return CapturedRun(

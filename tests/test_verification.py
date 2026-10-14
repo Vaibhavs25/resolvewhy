@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 from resolvewhy.model import (
     Artifact,
@@ -43,8 +44,14 @@ from resolvewhy.model import (
     VerificationStatus,
     VersionConstraint,
 )
+from resolvewhy.solving.solver import SolveResult, SolveStatus
 from resolvewhy.trace import deserialize_trace
-from resolvewhy.verification import verify, verify_serialized
+from resolvewhy.verification import (
+    VerificationCategory,
+    verify,
+    verify_safe,
+    verify_serialized,
+)
 
 
 def _ctx(
@@ -687,6 +694,7 @@ class ProductionVerifierTests(unittest.TestCase):
             domains=(_domain("pkg", ctx, (cand,)),), constraints=(c,),
         ))
         self.assertEqual(result.status, VerificationStatus.INSUFFICIENT_EVIDENCE)
+        self.assertEqual(result.category, VerificationCategory.UNSUPPORTED_SEMANTICS)
 
     def test_insufficient_yanked_artifact_without_yank_policy(self):
         ctx = _ctx()
@@ -866,7 +874,9 @@ class ProductionVerifierTests(unittest.TestCase):
         trace = deserialize_trace(Path("tests/fixtures/production_trace.json").read_bytes())
         artifact = Artifact(id="art:broken", candidate_ref="missing")
         broken = replace(trace, artifacts=(artifact,))
-        self.assertEqual(verify(broken).status, VerificationStatus.INVALID_TRACE)
+        result = verify(broken)
+        self.assertEqual(result.status, VerificationStatus.INVALID_TRACE)
+        self.assertEqual(result.category, VerificationCategory.INVALID_EVIDENCE)
 
     def test_invalid_duplicate_ids(self):
         ctx = _ctx()
@@ -1307,6 +1317,69 @@ class ProductionVerifierTests(unittest.TestCase):
         )
         self.assertEqual(verify(trace), verify(trace))
 
+    def test_public_result_shape_is_deterministic_and_machine_readable(self):
+        result = verify_serialized(
+            Path("tests/fixtures/production_trace.json").read_bytes()
+        )
+        self.assertEqual(result.category, VerificationCategory.VERIFIED_SAT)
+        self.assertEqual(result.to_json(), result.to_json())
+        self.assertEqual(
+            result.to_dict()["category"],
+            VerificationCategory.VERIFIED_SAT.value,
+        )
+        self.assertNotIn("tests/fixtures", result.to_json())
+
+    def test_resource_limit_has_a_stable_category(self):
+        ctx = _ctx()
+        candidate = _candidate("pkg", "1.0")
+        requirement = _req("pkg", "==", "1.0")
+        constraint = _constraint(
+            "c:pkg",
+            SemanticConstraintKind.REQUIREMENT,
+            (
+                SemanticLiteral(
+                    kind=SemanticConstraintKind.REQUIREMENT,
+                    package="pkg",
+                    operator="==",
+                    value="1.0",
+                ),
+            ),
+            TraceRef(ReferenceKind.REQUIREMENT, requirement.id),
+            "obs:c:pkg",
+        )
+        trace = _trace(
+            contexts=(ctx,),
+            requirements=(requirement,),
+            candidates=(candidate,),
+            domains=(_domain("pkg", ctx, (candidate,)),),
+            constraints=(constraint,),
+        )
+        with patch(
+            "resolvewhy.verification.verifier.solve",
+            return_value=SolveResult(
+                SolveStatus.INSUFFICIENT_EVIDENCE,
+                reason="evaluation_search_limit",
+                message="implementation detail is not a public contract",
+            ),
+        ):
+            result = verify(trace)
+        self.assertEqual(result.category, VerificationCategory.RESOURCE_LIMIT)
+        self.assertFalse(result.independently_verified)
+
+    def test_safe_verification_hides_unexpected_failure_details(self):
+        trace = deserialize_trace(
+            Path("tests/fixtures/production_trace.json").read_bytes()
+        )
+        with patch(
+            "resolvewhy.verification.verifier.verify",
+            side_effect=RuntimeError("private path /secret/index leaked"),
+        ):
+            result = verify_safe(trace)
+        self.assertEqual(result.status, VerificationStatus.INTERNAL_ERROR)
+        self.assertEqual(result.category, VerificationCategory.INTERNAL_ERROR)
+        self.assertEqual(result.issues[0].code, "internal_error")
+        self.assertNotIn("secret", result.to_json())
+        self.assertFalse(result.independently_verified)
 
 if __name__ == "__main__":
     unittest.main()

@@ -642,3 +642,47 @@ def verify_serialized(data: str | bytes | bytearray) -> VerificationResult:
             branch_results=(),
         )
     return verify(trace)
+
+
+def verify_safe(trace: Trace) -> VerificationResult:
+    """Verify a typed trace without exposing unexpected internal details.
+
+    ``verify`` remains the strict API: programmer errors and unexpected
+    failures propagate to the caller.  Services processing untrusted input can
+    instead use this boundary to receive a typed, non-verified result.  The
+    public diagnostic intentionally omits exception text and trace contents.
+    """
+    try:
+        return verify(trace)
+    except Exception:  # noqa: BLE001 - this is the explicit safe public boundary.
+        return _base_result(
+            trace if isinstance(trace, Trace) else None,
+            status=VerificationStatus.INTERNAL_ERROR,
+            issues=(
+                _issue(
+                    "internal_error",
+                    "verification did not complete due to an internal error",
+                ),
+            ),
+            reasons=("internal_error",),
+            independently_verified=False,
+        )
+
+
+def verify_serialized_safe(data: str | bytes | bytearray) -> VerificationResult:
+    """Safely verify serialized input, including unexpected internal failures."""
+    try:
+        return verify_serialized(data)
+    except Exception:  # noqa: BLE001 - this is the explicit safe public boundary.
+        return _base_result(
+            None,
+            status=VerificationStatus.INTERNAL_ERROR,
+            issues=(
+                _issue(
+                    "internal_error",
+                    "verification did not complete due to an internal error",
+                ),
+            ),
+            reasons=("internal_error",),
+            independently_verified=False,
+        )

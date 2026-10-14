@@ -11,6 +11,7 @@ class ExplanationKind(str, Enum):
     VERIFIED_SAT=VerificationStatus.VERIFIED_SAT.value
     INSUFFICIENT_EVIDENCE=VerificationStatus.INSUFFICIENT_EVIDENCE.value
     INVALID_TRACE=VerificationStatus.INVALID_TRACE.value
+    INTERNAL_ERROR=VerificationStatus.INTERNAL_ERROR.value
 @dataclass(frozen=True)
 class ExplanationScope:
     quantifier: ProofQuantifier|None

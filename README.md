@@ -75,6 +75,11 @@ See `docs/PRODUCTION_SEMANTIC_CORE.md`, `docs/PRODUCTION_TRACE_FORMAT.md`, `docs
 
 The production trace boundary provides deterministic UTF-8 JSON serialization and safe reconstruction of the typed semantic model. Unknown schema versions, unknown fields, malformed references, invalid enums, malformed markers, and invalid proof/coverage structures are rejected; incomplete evidence remains distinguishable from invalid structure.
 
+For the documented Python integration surface, typed verification categories,
+safe diagnostic behavior, and pre-1.0 compatibility policy, see
+[`docs/PUBLIC_API.md`](docs/PUBLIC_API.md). The package remains a library: it
+does not provide a CLI, HTTP API, hosted service, or universal resolver adapter.
+
 See `docs/PRODUCTION_TRACE_FORMAT.md` and the canonical fixture at `tests/fixtures/production_trace.json`.
 
 ## Research question

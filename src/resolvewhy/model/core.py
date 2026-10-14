@@ -80,6 +80,7 @@ class VerificationStatus(str, Enum):
     VERIFIED_UNSAT = "VERIFIED_UNSAT"
     INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
     INVALID_TRACE = "INVALID_TRACE"
+    INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
 class EvaluationDomainKind(str, Enum):

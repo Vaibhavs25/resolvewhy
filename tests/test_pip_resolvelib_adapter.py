@@ -13,6 +13,8 @@ from packaging.version import Version
 
 from resolvewhy.adapters.pip_resolvelib import (
     AdapterContext,
+    AdapterExecutionError,
+    AdapterFailureCode,
     AdapterNormalizationError,
     DefaultPipSemantics,
     PipResolvelibAdapter,
@@ -408,8 +410,10 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
             provider=BrokenProvider({}),
             context=self.context(),
         )
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(AdapterExecutionError) as raised:
             adapter.resolve([Requirement("a==1.0")])
+        self.assertEqual(raised.exception.code, AdapterFailureCode.EXECUTION_FAILED)
+        self.assertNotIn("unrelated provider failure", str(raised.exception))
 
     def test_resolver_diagnostic_text_is_not_a_semantic_premise(self):
         result = self.adapter(

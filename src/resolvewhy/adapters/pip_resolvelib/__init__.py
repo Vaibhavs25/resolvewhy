@@ -1,6 +1,11 @@
 """pip/resolvelib capture and normalization adapter."""
 
-from .adapter import AdapterExecutionError, AdapterResult, PipResolvelibAdapter
+from .adapter import (
+    AdapterExecutionError,
+    AdapterFailureCode,
+    AdapterResult,
+    PipResolvelibAdapter,
+)
 from .capture import (
     CaptureBuffer,
     CapturedRun,
@@ -29,6 +34,7 @@ from .normalize import (
 __all__ = [
     "AdapterContext",
     "AdapterExecutionError",
+    "AdapterFailureCode",
     "AdapterNormalizationError",
     "AdapterResult",
     "ArtifactView",
