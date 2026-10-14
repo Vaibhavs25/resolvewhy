@@ -3,6 +3,31 @@
 Complete every item before publishing a release. Record command output and
 tool versions in the release notes or audit report.
 
+## CI-enforced gates
+
+For a proposed commit, GitHub Actions runs on every push and pull request:
+
+- pinned Ruff and mypy checks on Linux Python 3.12;
+- production/adapter tests, research tests, the network-free reproducibility
+  harness, and bounded-performance regression coverage on Linux and Windows
+  Python 3.10, 3.11, and 3.12;
+- Bandit and strict dependency audits, including base and optional adapter
+  environments; and
+- wheel/sdist builds, metadata validation, isolated external artifact smoke
+  tests, and `pip check` on Python 3.10, 3.11, and 3.12.
+
+CI success is evidence only for the commit tested. It does not create a tag,
+publish a package, establish an SLO, add a wall-clock timeout or telemetry
+guarantee, establish universal resolver compatibility, or change H2e from
+**NOT TESTED**.
+
+## Release-candidate decision
+
+Before proposing a release candidate, require a successful CI run for the
+candidate commit, every mandatory production-readiness row to be `PASS`, this
+checklist to remain accurate, a clean reviewed tree, and explicit approval.
+Release tags and package publication require separate authorization.
+
 - [ ] Review the production-readiness contract; every mandatory row is PASS.
 - [ ] Run production unit and adapter tests on Linux and Windows for Python
       3.10, 3.11, and 3.12.

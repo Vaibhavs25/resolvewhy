@@ -1,0 +1,4 @@
+# Reproducible CI quality-gate tooling. Runtime dependencies remain in
+# pyproject.toml; these tools are only for linting and static analysis.
+ruff==0.17.0
+mypy==2.4.0
