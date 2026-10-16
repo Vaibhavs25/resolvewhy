@@ -10,7 +10,7 @@ ecosystem-wide resolver interface.
 The supported import surfaces are:
 
 - `resolvewhy.model` for immutable trace and semantic-model dataclasses;
-- `resolvewhy.trace` for the `resolvewhy-trace/1.0` codec and its explicit
+- `resolvewhy.trace` for the `resolvewhy-trace/1.0` and `1.1` codec and its explicit
   limits;
 - `resolvewhy.validation` for structural validation;
 - `resolvewhy.verification` for independently recomputed verification;
@@ -82,14 +82,21 @@ compatibility promises; see `docs/ADAPTER_PIP_RESOLVELIB.md`.
 
 ## Trace and compatibility policy
 
-`resolvewhy-trace/1.0` has canonical deterministic UTF-8 JSON serialization.
-Unknown fields, unknown schema versions, malformed references, and values over
-the published size/depth/node limits are rejected. Existing `1.0` documents
-remain readable only when they meet the current validation and security limits.
-No automatic schema migration is performed.
+`resolvewhy-trace/1.1` is the extras-aware write schema and `1.0` remains a
+strictly readable historical schema. Unknown fields, unknown schema versions,
+malformed references, and values over the published size/depth/node limits are
+rejected. Fieldless `1.0` traces do not assert that candidates have no extras:
+their declaration metadata is `missing`. Valid `1.0` models reserialize as
+`1.0` deterministically; any model with requested/declared extras or optional
+edge extra context must serialize as `1.1`.
+
+For active requested extras, a complete declaration that omits the extra yields
+the stable non-verified `undeclared_extra` diagnostic. Missing and unknown
+declaration metadata yield separate non-verified diagnostics; callers must not
+interpret either as a declaration that no extras exist.
 
 Before a `1.0` package release, Resolvewhy makes no cross-release compatibility
-guarantee beyond the documented `resolvewhy-trace/1.0` schema and Python 3.10,
+guarantee beyond the documented trace schemas and Python 3.10,
 3.11, and 3.12 for this candidate. Changes to this named Python surface should
 be additive where practical. Any removal or material semantic change requires a
 documented deprecation notice in a release before it is removed, except where a

@@ -21,6 +21,7 @@ from resolvewhy.model import (
     CoverageAttestation,
     CoverageAttestationKind,
     CoverageStatus,
+    DeclaredExtrasStatus,
     DependencyEdge,
     DependencyEdgeId,
     EvaluationDomain,
@@ -57,9 +58,14 @@ from resolvewhy.model import (
     TraceRef,
     TraceScope,
     VersionConstraint,
+    canonical_extra_name,
 )
 
-SCHEMA = "resolvewhy-trace/1.0"
+# ``SCHEMA`` is the write-default.  Historical 1.0 input remains readable,
+# but retains its fieldless extras semantics when round-tripped.
+SCHEMA = "resolvewhy-trace/1.1"
+LEGACY_SCHEMA = "resolvewhy-trace/1.0"
+SUPPORTED_SCHEMAS = frozenset((LEGACY_SCHEMA, SCHEMA))
 MAX_TRACE_BYTES = 2 * 1024 * 1024
 MAX_JSON_DEPTH = 64
 MAX_JSON_NODES = 200_000
@@ -177,6 +183,21 @@ def _string_array(value: Any, path: str) -> tuple[str, ...]:
     return tuple(_require_str(item, f"{path}[{index}]") for index, item in enumerate(values))
 
 
+def _extra_array(value: Any, path: str) -> tuple[str, ...]:
+    """Decode canonical, deterministically ordered PEP 685 extra names."""
+    values = _string_array(value, path)
+    if tuple(sorted(values)) != values or len(set(values)) != len(values):
+        raise TraceDecodeError(f"{path} must be sorted and unique")
+    for index, name in enumerate(values):
+        try:
+            canonical = canonical_extra_name(name)
+        except ValueError as exc:
+            raise TraceDecodeError(f"{path}[{index}] is not a valid extra name") from exc
+        if canonical != name:
+            raise TraceDecodeError(f"{path}[{index}] must use the canonical extra spelling")
+    return values
+
+
 def _serialize_ref(ref: TraceRef) -> dict[str, Any]:
     return {"kind": _enum(ref.kind, ReferenceKind, "reference.kind"), "id": ref.id}
 
@@ -243,12 +264,14 @@ def _deserialize_marker(value: Any, path: str) -> MarkerExpression | None:
         return MarkerExpression(
             kind=cast(Literal["and", "or", "not"], kind), children=tuple(child_values)
         )
+    except TraceDecodeError:
+        raise
     except ValueError as exc:
         raise TraceDecodeError(f"{path} is malformed") from exc
 
 
-def _serialize_requirement(value: Requirement) -> dict[str, Any]:
-    return {
+def _serialize_requirement(value: Requirement, schema: str) -> dict[str, Any]:
+    result: dict[str, Any] = {
         "id": value.id,
         "package": value.package,
         "constraint": None
@@ -259,13 +282,24 @@ def _serialize_requirement(value: Requirement) -> dict[str, Any]:
         "activation": _serialize_marker(value.activation),
         "evidence_refs": [_serialize_ref(ref) for ref in value.evidence_refs],
     }
+    if schema == SCHEMA:
+        result["requested_extras"] = list(value.requested_extras)
+    return result
 
 
-def _deserialize_requirement(value: Any, path: str) -> Requirement:
+def _deserialize_requirement(value: Any, path: str, schema: str) -> Requirement:
     obj = _require_dict(value, path)
     _check_keys(
         obj,
-        required=("id", "package", "constraint", "raw", "parent_candidate_ref", "activation", "evidence_refs"),
+        required=(
+            "id",
+            "package",
+            "constraint",
+            "raw",
+            "parent_candidate_ref",
+            "activation",
+            "evidence_refs",
+        ) + (("requested_extras",) if schema == SCHEMA else ()),
         path=path,
     )
     constraint_value = obj["constraint"]
@@ -288,17 +322,24 @@ def _deserialize_requirement(value: Any, path: str) -> Requirement:
                 obj["parent_candidate_ref"], f"{path}.parent_candidate_ref", CandidateId
             ),
             activation=_deserialize_marker(obj["activation"], f"{path}.activation"),
+            requested_extras=(
+                _extra_array(obj["requested_extras"], f"{path}.requested_extras")
+                if schema == SCHEMA
+                else ()
+            ),
             evidence_refs=tuple(
                 _deserialize_ref(item, f"{path}.evidence_refs[{index}]")
                 for index, item in enumerate(_require_list(obj["evidence_refs"], f"{path}.evidence_refs"))
             ),
         )
+    except TraceDecodeError:
+        raise
     except ValueError as exc:
         raise TraceDecodeError(f"{path} is malformed") from exc
 
 
-def _serialize_candidate(value: Candidate) -> dict[str, Any]:
-    return {
+def _serialize_candidate(value: Candidate, schema: str) -> dict[str, Any]:
+    result: dict[str, Any] = {
         "id": value.id,
         "package": value.package,
         "version": value.version,
@@ -307,30 +348,60 @@ def _serialize_candidate(value: Candidate) -> dict[str, Any]:
         "origin": value.origin,
         "metadata_ref": None if value.metadata_ref is None else _serialize_ref(value.metadata_ref),
     }
+    if schema == SCHEMA:
+        result["declared_extras"] = list(value.declared_extras)
+        result["declared_extras_status"] = _enum(
+            value.declared_extras_status,
+            DeclaredExtrasStatus,
+            "candidate.declared_extras_status",
+        )
+    return result
 
 
-def _deserialize_candidate(value: Any, path: str) -> Candidate:
+def _deserialize_candidate(value: Any, path: str, schema: str) -> Candidate:
     obj = _require_dict(value, path)
     _check_keys(
         obj,
-        required=("id", "package", "version", "kind", "source_ref", "origin", "metadata_ref"),
+        required=("id", "package", "version", "kind", "source_ref", "origin", "metadata_ref")
+        + (("declared_extras", "declared_extras_status") if schema == SCHEMA else ()),
         path=path,
     )
     try:
         kind = CandidateKind(_require_str(obj["kind"], f"{path}.kind"))
     except ValueError as exc:
         raise TraceDecodeError(f"{path}.kind has invalid candidate kind") from exc
-    return Candidate(
-        id=_identifier(obj["id"], f"{path}.id", CandidateId),
-        package=_require_str(obj["package"], f"{path}.package"),
-        version=_optional_str(obj["version"], f"{path}.version"),
-        kind=kind,
-        source_ref=_optional_str(obj["source_ref"], f"{path}.source_ref"),
-        origin=_optional_str(obj["origin"], f"{path}.origin"),
-        metadata_ref=None
-        if obj["metadata_ref"] is None
-        else _deserialize_ref(obj["metadata_ref"], f"{path}.metadata_ref"),
-    )
+    try:
+        declared_status = (
+            DeclaredExtrasStatus(
+                _require_str(obj["declared_extras_status"], f"{path}.declared_extras_status")
+            )
+            if schema == SCHEMA
+            else DeclaredExtrasStatus.MISSING
+        )
+    except ValueError as exc:
+        raise TraceDecodeError(f"{path}.declared_extras_status has invalid value") from exc
+    try:
+        return Candidate(
+            id=_identifier(obj["id"], f"{path}.id", CandidateId),
+            package=_require_str(obj["package"], f"{path}.package"),
+            version=_optional_str(obj["version"], f"{path}.version"),
+            kind=kind,
+            source_ref=_optional_str(obj["source_ref"], f"{path}.source_ref"),
+            origin=_optional_str(obj["origin"], f"{path}.origin"),
+            metadata_ref=None
+            if obj["metadata_ref"] is None
+            else _deserialize_ref(obj["metadata_ref"], f"{path}.metadata_ref"),
+            declared_extras=(
+                _extra_array(obj["declared_extras"], f"{path}.declared_extras")
+                if schema == SCHEMA
+                else ()
+            ),
+            declared_extras_status=declared_status,
+        )
+    except TraceDecodeError:
+        raise
+    except ValueError as exc:
+        raise TraceDecodeError(f"{path} is malformed") from exc
 
 
 def _serialize_artifact(value: Artifact) -> dict[str, Any]:
@@ -672,8 +743,8 @@ def _deserialize_candidate_domain(value: Any, path: str) -> CandidateDomain:
         raise TraceDecodeError(f"{path} is malformed") from exc
 
 
-def _serialize_dependency(value: DependencyEdge) -> dict[str, Any]:
-    return {
+def _serialize_dependency(value: DependencyEdge, schema: str) -> dict[str, Any]:
+    result: dict[str, Any] = {
         "id": value.id,
         "parent_candidate_ref": value.parent_candidate_ref,
         "requirement_ref": value.requirement_ref,
@@ -682,9 +753,12 @@ def _serialize_dependency(value: DependencyEdge) -> dict[str, Any]:
         "evidence_refs": [_serialize_ref(ref) for ref in value.evidence_refs],
         "source_namespace": value.source_namespace,
     }
+    if schema == SCHEMA:
+        result["extra_context"] = list(value.extra_context)
+    return result
 
 
-def _deserialize_dependency(value: Any, path: str) -> DependencyEdge:
+def _deserialize_dependency(value: Any, path: str, schema: str) -> DependencyEdge:
     obj = _require_dict(value, path)
     _check_keys(
         obj,
@@ -696,7 +770,7 @@ def _deserialize_dependency(value: Any, path: str) -> DependencyEdge:
             "raw_dependency",
             "evidence_refs",
             "source_namespace",
-        ),
+        ) + (("extra_context",) if schema == SCHEMA else ()),
         path=path,
     )
     try:
@@ -709,6 +783,11 @@ def _deserialize_dependency(value: Any, path: str) -> DependencyEdge:
                 obj["requirement_ref"], f"{path}.requirement_ref", RequirementId
             ),
             activation=_deserialize_marker(obj["activation"], f"{path}.activation"),
+            extra_context=(
+                _extra_array(obj["extra_context"], f"{path}.extra_context")
+                if schema == SCHEMA
+                else ()
+            ),
             raw_dependency=_optional_str(obj["raw_dependency"], f"{path}.raw_dependency"),
             evidence_refs=tuple(
                 _deserialize_ref(item, f"{path}.evidence_refs[{index}]")
@@ -718,6 +797,8 @@ def _deserialize_dependency(value: Any, path: str) -> DependencyEdge:
                 obj["source_namespace"], f"{path}.source_namespace"
             ),
         )
+    except TraceDecodeError:
+        raise
     except ValueError as exc:
         raise TraceDecodeError(f"{path} is malformed") from exc
 
@@ -1059,9 +1140,9 @@ def _deserialize_proof_claim(value: Any, path: str) -> ProofClaim:
     )
 
 
-def _serialize_trace(trace: Trace) -> dict[str, Any]:
+def _serialize_trace(trace: Trace, schema: str) -> dict[str, Any]:
     return {
-        "schema": SCHEMA,
+        "schema": schema,
         "resolver": {
             "name": trace.resolver_name,
             "version": trace.resolver_version,
@@ -1072,10 +1153,10 @@ def _serialize_trace(trace: Trace) -> dict[str, Any]:
         "evaluation_domain": _serialize_evaluation_domain(trace.evaluation_domain),
         "resolution_policy": _serialize_policy(trace.resolution_policy),
         "candidate_domains": [_serialize_candidate_domain(item) for item in trace.candidate_domains],
-        "requirements": [_serialize_requirement(item) for item in trace.requirements],
-        "candidates": [_serialize_candidate(item) for item in trace.candidates],
+        "requirements": [_serialize_requirement(item, schema) for item in trace.requirements],
+        "candidates": [_serialize_candidate(item, schema) for item in trace.candidates],
         "artifacts": [_serialize_artifact(item) for item in trace.artifacts],
-        "dependencies": [_serialize_dependency(item) for item in trace.dependencies],
+        "dependencies": [_serialize_dependency(item, schema) for item in trace.dependencies],
         "rejections": [_serialize_rejection(item) for item in trace.rejections],
         "incompatibilities": [
             _serialize_incompatibility(item) for item in trace.incompatibilities
@@ -1115,9 +1196,10 @@ def _deserialize_trace(value: Any) -> Trace:
         path="$",
     )
     schema = _require_str(obj["schema"], "$.schema")
-    if schema != SCHEMA:
+    if schema not in SUPPORTED_SCHEMAS:
         raise TraceDecodeError(
-            f"unsupported schema {schema!r}; this loader supports {SCHEMA!r} only"
+            f"unsupported schema {schema!r}; this loader supports "
+            f"{LEGACY_SCHEMA!r} and {SCHEMA!r}"
         )
 
     resolver = _require_dict(obj["resolver"], "$.resolver")
@@ -1155,11 +1237,11 @@ def _deserialize_trace(value: Any) -> Trace:
                 )
             ),
             requirements=tuple(
-                _deserialize_requirement(item, f"$.requirements[{index}]")
+                _deserialize_requirement(item, f"$.requirements[{index}]", schema)
                 for index, item in enumerate(_require_list(obj["requirements"], "$.requirements"))
             ),
             candidates=tuple(
-                _deserialize_candidate(item, f"$.candidates[{index}]")
+                _deserialize_candidate(item, f"$.candidates[{index}]", schema)
                 for index, item in enumerate(_require_list(obj["candidates"], "$.candidates"))
             ),
             artifacts=tuple(
@@ -1167,7 +1249,7 @@ def _deserialize_trace(value: Any) -> Trace:
                 for index, item in enumerate(_require_list(obj["artifacts"], "$.artifacts"))
             ),
             dependencies=tuple(
-                _deserialize_dependency(item, f"$.dependencies[{index}]")
+                _deserialize_dependency(item, f"$.dependencies[{index}]", schema)
                 for index, item in enumerate(_require_list(obj["dependencies"], "$.dependencies"))
             ),
             rejections=tuple(
@@ -1195,6 +1277,8 @@ def _deserialize_trace(value: Any) -> Trace:
             ),
             proof_claim=_deserialize_proof_claim(obj["proof_claim"], "$.proof_claim"),
         )
+    except TraceDecodeError:
+        raise
     except (TypeError, ValueError) as exc:
         raise TraceDecodeError("trace contains malformed semantic data") from exc
 
@@ -1380,9 +1464,34 @@ def serialize_trace(trace: Trace) -> bytes:
     """Return canonical UTF-8 JSON bytes for a production Trace."""
     if not isinstance(trace, Trace):
         raise TraceSerializationError("serialize_trace expects a resolvewhy.model.Trace")
-    if trace.schema != SCHEMA:
+    if trace.schema not in SUPPORTED_SCHEMAS:
         raise TraceSerializationError(
-            f"unsupported trace schema {trace.schema!r}; expected {SCHEMA!r}"
+            f"unsupported trace schema {trace.schema!r}; expected one of "
+            f"{LEGACY_SCHEMA!r}, {SCHEMA!r}"
+        )
+
+    # A 1.0 object is serialized as 1.0 only when it can still be represented
+    # faithfully.  Its omission of extras fields is semantic: it means no
+    # authority about candidate extras, not an empty authoritative set.
+    if trace.schema == LEGACY_SCHEMA and any(
+        requirement.requested_extras for requirement in trace.requirements
+    ):
+        raise TraceSerializationError(
+            "resolvewhy-trace/1.0 cannot represent requested extras; use 1.1"
+        )
+    if trace.schema == LEGACY_SCHEMA and any(
+        candidate.declared_extras
+        or candidate.declared_extras_status is not DeclaredExtrasStatus.MISSING
+        for candidate in trace.candidates
+    ):
+        raise TraceSerializationError(
+            "resolvewhy-trace/1.0 cannot represent declared extras metadata; use 1.1"
+        )
+    if trace.schema == LEGACY_SCHEMA and any(
+        edge.extra_context for edge in trace.dependencies
+    ):
+        raise TraceSerializationError(
+            "resolvewhy-trace/1.0 cannot represent optional-edge extra context; use 1.1"
         )
 
     # Never emit an artifact that the production structural validator would reject.
@@ -1393,7 +1502,7 @@ def serialize_trace(trace: Trace) -> bytes:
         details = "; ".join(issue.message for issue in issues)
         raise TraceSerializationError(f"trace failed structural validation: {details}")
 
-    payload = _serialize_trace(trace)
+    payload = _serialize_trace(trace, trace.schema)
     return json.dumps(
         payload,
         ensure_ascii=False,

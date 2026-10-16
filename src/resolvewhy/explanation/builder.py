@@ -34,7 +34,8 @@ def _dependency_paths(problem,constraints):
                 if e: rr=str(e.requirement_ref); parent=str(e.parent_candidate_ref)
             else: continue
             pid=f"path:{c.id}:{dd or rr}"
-            out[pid]=ExplanationDependencyPath(pid,str(c.id),rr,dd,parent)
+            extra_context=edges[dd].extra_context if dd and dd in edges else ()
+            out[pid]=ExplanationDependencyPath(pid,str(c.id),rr,dd,parent,extra_context)
     return tuple(out[x] for x in sorted(out))
 def _referenced_ids(problem,constraints,paths):
     cids=set(); aids=set()

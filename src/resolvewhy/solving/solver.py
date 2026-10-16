@@ -153,10 +153,16 @@ def solve(problem: SemanticProblem) -> SolveResult:
         )
 
     results: list[BranchOutcome] = []
+    extra_diagnostics: list[SemanticGap] = []
     for context in problem.runtime_contexts:
         branch_problem = problem.with_constraints(problem.semantic_constraints)
         try:
-            outcome = evaluate_branch(branch_problem, branch_problem.semantic_constraints, context)
+            outcome = evaluate_branch(
+                branch_problem,
+                branch_problem.semantic_constraints,
+                context,
+                extra_diagnostics=extra_diagnostics,
+            )
         except EvaluationLimit as exc:
             return SolveResult(SolveStatus.INSUFFICIENT_EVIDENCE, tuple(results), exc.code, str(exc))
         except SemanticGap as exc:
@@ -172,6 +178,14 @@ def solve(problem: SemanticProblem) -> SolveResult:
 
     combined = _combine(problem.quantifier, tuple(results))
     if combined is BranchOutcome.UNKNOWN:
+        if extra_diagnostics:
+            diagnostic = extra_diagnostics[0]
+            return SolveResult(
+                SolveStatus.INSUFFICIENT_EVIDENCE,
+                tuple(results),
+                diagnostic.code,
+                str(diagnostic),
+            )
         return SolveResult(
             SolveStatus.INSUFFICIENT_EVIDENCE,
             tuple(results),

@@ -2,7 +2,8 @@
 
 ## 1. Purpose
 
-Phase 4A adds the production trust boundary for resolvewhy-trace/1.0.
+Phase 4A adds the production trust boundary for strict historical
+resolvewhy-trace/1.0 and extras-aware resolvewhy-trace/1.1.
 
 The verifier reconstructs the semantic proposition represented by a production Trace and independently determines whether that proposition is satisfiable over its explicitly declared proof scope.
 
@@ -46,7 +47,7 @@ Resolver-native observations may remain in the trace as evidence, but they do no
 
 Verification proceeds in this order:
 
-1. Check that the input is a production Trace or safely decode resolvewhy-trace/1.0.
+1. Check that the input is a production Trace or safely decode a supported production trace schema.
 2. Run the existing structural validator.
 3. Resolve proof-premise bindings.
 4. Check proof-relevant evidence states.
@@ -312,7 +313,7 @@ The existing production suite remains part of the validation set.
 Phase 4A does not establish complete support for:
 
 - arbitrary PEP 508;
-- complete extras semantics;
+- arbitrary extras-marker grammar or complete ecosystem extras semantics;
 - dynamic build metadata;
 - full wheel or sdist selection;
 - complete hash semantics;

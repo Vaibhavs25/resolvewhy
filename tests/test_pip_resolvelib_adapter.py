@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 import unittest
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +23,7 @@ from resolvewhy.model import (
     CoverageAttestation,
     CoverageAttestationKind,
     CoverageStatus,
+    DeclaredExtrasStatus,
     EvaluationDomain,
     EvaluationDomainKind,
     EvidenceStateKind,
@@ -126,7 +127,7 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         result = self.adapter(candidates).resolve([Requirement("a==1.0")])
         self.assertEqual(result.native_status_claim, "SAT")
         self.assertIsInstance(result.trace, Trace)
-        self.assertEqual(result.trace.schema, "resolvewhy-trace/1.0")
+        self.assertEqual(result.trace.schema, "resolvewhy-trace/1.1")
         self.assertEqual(validate_trace(result.trace), ())
         payload = serialize_trace(result.trace)
         self.assertEqual(deserialize_trace(payload), result.trace)
@@ -158,7 +159,7 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertEqual(result.native_status_claim, "UNSAT")
         self.assertEqual(result.native_error_type, "ResolutionImpossible")
         self.assertIsInstance(result.trace, Trace)
-        self.assertEqual(result.trace.schema, "resolvewhy-trace/1.0")
+        self.assertEqual(result.trace.schema, "resolvewhy-trace/1.1")
         self.assertEqual(validate_trace(result.trace), ())
         self.assertEqual(result.trace.proof_claim.quantifier, ProofQuantifier.EXISTENTIAL)
 
@@ -252,13 +253,94 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertTrue(view.activation is not None)
         self.assertEqual(view.activation.kind, "atom")
 
-    def test_multiple_version_constraints_are_not_dropped_from_semantic_view(self):
+    def test_conjunctive_version_constraints_and_exclusion_are_not_dropped(self):
         semantics = DefaultPipSemantics()
-        view = semantics.requirement_view(Requirement("c>=1,<3"))
+        view = semantics.requirement_view(Requirement("c>=1,!=1.5,<3"))
         self.assertEqual(
             {(item.operator, item.version) for item in view.constraints},
-            {(">=", "1"), ("<", "3")},
+            {(">=", "1"), ("!=", "1.5"), ("<", "3")},
         )
+
+    def test_compatible_release_and_requested_extra_are_normalized(self):
+        view = DefaultPipSemantics().requirement_view(Requirement("c[feature]~=1.4.5"))
+        self.assertTrue(view.complete)
+        self.assertEqual(view.requested_extras, ("feature",))
+        self.assertEqual(
+            tuple((item.operator, item.version) for item in view.constraints),
+            ((">=", "1.4.5"), ("<", "1.5")),
+        )
+
+    def test_compatible_release_two_segment_normalization_is_preserved(self):
+        view = DefaultPipSemantics().requirement_view(Requirement("c~=1.4"))
+        self.assertTrue(view.complete)
+        self.assertEqual(
+            tuple((item.operator, item.version) for item in view.constraints),
+            ((">=", "1.4"), ("<", "2.0")),
+        )
+
+    def test_simple_packaging_extra_marker_becomes_edge_context(self):
+        view = DefaultPipSemantics().requirement_view(
+            Requirement('c; extra == "Feature_Name"')
+        )
+        self.assertTrue(view.complete)
+        self.assertIsNone(view.activation)
+        self.assertEqual(view.extra_context, ("feature-name",))
+
+    def test_unsupported_compatible_release_with_extras_is_incomplete(self):
+        view = DefaultPipSemantics().requirement_view(Requirement("c[feature]~=1.4.5rc1"))
+        self.assertFalse(view.complete)
+        self.assertEqual(view.requested_extras, ("feature",))
+        self.assertTrue(any("compatible-release" in item for item in view.unsupported_reasons))
+
+    def test_conflicting_declared_extra_metadata_is_not_merged(self):
+        from resolvewhy.adapters.pip_resolvelib.capture import (
+            CaptureBuffer,
+            CapturedRun,
+            MatchEvent,
+            RequirementEvent,
+        )
+        from resolvewhy.adapters.pip_resolvelib.normalize import normalize_capture
+
+        first = FakeCandidate("pkg", Version("1.0"))
+        second = FakeCandidate("pkg", Version("1.0"))
+
+        class ConflictingSemantics(DefaultPipSemantics):
+            def candidate_view(self, candidate):
+                view = super().candidate_view(candidate)
+                return replace(
+                    view,
+                    declared_extras=("one",) if candidate is first else ("two",),
+                    declared_extras_status=DeclaredExtrasStatus.COMPLETE,
+                )
+
+        buffer = CaptureBuffer()
+        buffer.matches.extend(
+            (
+                MatchEvent(buffer.next_sequence(), "pkg", first),
+                MatchEvent(buffer.next_sequence(), "pkg", second),
+            )
+        )
+        buffer.requirements.append(
+            RequirementEvent(buffer.next_sequence(), Requirement("pkg==1.0"), None)
+        )
+        buffer.outcome = "resolved"
+        trace = normalize_capture(
+            CapturedRun(buffer=buffer, resolver_result=object(), native_error=None),
+            self.context(),
+            ConflictingSemantics(),
+        )
+        self.assertEqual(len(trace.candidates), 1)
+        self.assertEqual(trace.candidates[0].declared_extras, ())
+        self.assertEqual(
+            trace.candidates[0].declared_extras_status,
+            DeclaredExtrasStatus.UNKNOWN,
+        )
+        candidate_evidence = next(
+            item
+            for item in trace.evidence_state.observations
+            if item.kind == "resolver-candidate"
+        )
+        self.assertEqual(candidate_evidence.state, EvidenceStateKind.INCOMPLETE)
 
     def test_unsupported_marker_does_not_become_false_fact(self):
         class MarkerLikeRequirement:

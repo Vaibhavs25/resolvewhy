@@ -1,6 +1,6 @@
 # Production Trace Format
 
-**Schema:** `resolvewhy-trace/1.0`  
+**Write schema:** `resolvewhy-trace/1.1` (`1.0` remains readable)
 **Status:** production-format foundation; the format is versioned and implemented, but it is not an ecosystem standard.
 
 ## 1. Purpose
@@ -14,7 +14,7 @@ resolvewhy.model.Trace
 serialize_trace()
         |
         v
-resolvewhy-trace/1.0 JSON
+resolvewhy-trace/1.1 JSON
         |
         v
 deserialize_trace()
@@ -29,15 +29,24 @@ The format is designed to carry the validated semantic fragment from the researc
 
 ## 2. Versioning policy
 
-The current identifier is exactly:
+New extras-aware traces use exactly:
 
 ```
-resolvewhy-trace/1.0
+resolvewhy-trace/1.1
 ```
 
-The loader accepts that identifier only.
+The loader accepts exact `resolvewhy-trace/1.0` and
+`resolvewhy-trace/1.1` identifiers only. Unknown versions are rejected.
 
-A breaking change to required fields, field meaning, reference semantics, enum semantics, or proof-scope semantics requires a new schema version. An unknown schema identifier is rejected; it is never silently interpreted as `1.0`.
+`1.0` is a strict historical schema: it has no extras fields. On read, its
+fieldless requirements have no requested extras and its candidates have
+`declared_extras_status = missing`; this is not reinterpreted as authoritative
+evidence of an empty extra set. Reserializing a valid fieldless `1.0` model
+deterministically keeps it as `1.0`. A model using extras metadata must use
+`1.1`; attempting to serialize it as `1.0` is rejected rather than silently
+dropping fields.
+
+A breaking change to required fields, field meaning, reference semantics, enum semantics, or proof-scope semantics requires a new schema version. An unknown schema identifier is rejected; it is never silently interpreted as `1.0` or `1.1`.
 
 Version `1.0` intentionally has no generic extension bag. Unknown fields are rejected. Resolver-native information belongs in the typed namespaced evidence records already represented by the semantic model. A future version may introduce an explicit namespaced extension mechanism without changing the meaning of existing `1.0` traces.
 
@@ -97,6 +106,7 @@ Requirements preserve:
 - optional raw representation;
 - optional parent candidate;
 - activation/marker expression;
+- in `1.1`, a sorted canonical `requested_extras` array;
 - evidence references.
 
 Dependency edges preserve:
@@ -105,6 +115,7 @@ Dependency edges preserve:
 - parent candidate identity;
 - requirement identity;
 - activation/marker expression;
+- in `1.1`, sorted canonical `extra_context` names for optional-edge activation;
 - raw dependency representation;
 - evidence references;
 - optional resolver/provider namespace.
@@ -114,6 +125,14 @@ The activation condition is not flattened away.
 ## 6. Candidate and artifact identity
 
 Candidates use an opaque ID and retain source/origin information.
+
+In `1.1`, candidates also carry `declared_extras` and
+`declared_extras_status`. `complete` makes the array authoritative (including
+an empty array); `unknown` means metadata was observed but cannot be safely
+used; `missing` means no declaration metadata was supplied. Extra names are
+canonical PEP 685 spellings, sorted and unique. The decoder rejects aliases,
+duplicates, malformed names, and any `1.0`/`1.1` field combination that does
+not match the declared schema.
 
 Package + version is not treated as globally unique.
 
@@ -231,7 +250,7 @@ These records are audit/evidence material. They do not become a universal native
 - no Python `repr()`;
 - no pickle.
 
-The current model does not declare its tuple-valued collections as unordered sets. Therefore their element order is preserved exactly rather than silently sorted. This guarantees lossless model round-tripping. Object-key ordering is the only universal canonical ordering applied by the serializer in version `1.0`.
+The current model does not declare its tuple-valued collections as unordered sets. Therefore their element order is preserved exactly rather than silently sorted, except that extras arrays are explicitly canonical sorted sets. This guarantees lossless model round-tripping. Object-key ordering is the only universal canonical ordering applied by the serializer.
 
 The resulting UTF-8 byte sequence is stable and suitable as a deterministic hashing input.
 
@@ -323,11 +342,13 @@ Research files under `research/` remain historical/experimental evidence. The pr
 
 ## 19. Compatibility policy
 
-A `1.0` artifact is interpreted only according to the `1.0` rules.
+A `1.0` artifact is interpreted only according to the `1.0` rules; it is never
+upgraded implicitly to `1.1` semantics.
 
 Compatibility guarantees:
 
 - a `1.0` trace must remain readable by future implementations that explicitly support `1.0`;
+- a `1.1` trace carries extras fields and must identify itself as `1.1`;
 - breaking semantic changes require a new version;
 - unknown schema versions are rejected;
 - unknown fields inside `1.0` objects are rejected;

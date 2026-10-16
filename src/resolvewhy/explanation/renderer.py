@@ -17,7 +17,8 @@ def render_explanation(explanation:Explanation)->str:
         lines += ["","Dependency relationships:"]
         for path in explanation.dependency_paths:
             chain=tuple(v for v in (path.parent_candidate_ref,path.dependency_ref,path.requirement_ref) if v)
-            lines.append(f"- [{path.id}] "+" -> ".join(chain))
+            context=(f" [extra: {', '.join(path.extra_context)}]" if path.extra_context else "")
+            lines.append(f"- [{path.id}] "+" -> ".join(chain)+context)
     if explanation.candidates:
         lines += ["","Relevant candidates:"]
         for candidate in explanation.candidates: lines.append(f"- [{candidate.id}] {candidate.package}=={candidate.version or 'unknown-version'} ({candidate.source_ref or 'unknown-source'})")

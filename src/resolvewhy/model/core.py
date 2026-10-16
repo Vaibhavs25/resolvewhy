@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Literal, NewType
@@ -24,6 +25,30 @@ def _required(value: str, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty string")
     return value
+
+
+_CANONICAL_EXTRA_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def canonical_extra_name(value: str) -> str:
+    """Return the PEP 685 canonical spelling for an extra name.
+
+    The semantic model stores canonical spellings exclusively.  Producers may
+    canonicalize native resolver values before constructing the model, while
+    the trace decoder rejects non-canonical wire values rather than silently
+    changing a signed or otherwise audited trace.
+    """
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("extra name must be a non-empty string")
+    return re.sub(r"[-_.]+", "-", value).lower()
+
+
+def _validate_extra_names(values: tuple[str, ...], field: str) -> None:
+    if tuple(sorted(values)) != values or len(set(values)) != len(values):
+        raise ValueError(f"{field} must be sorted and unique")
+    for value in values:
+        if not _CANONICAL_EXTRA_RE.fullmatch(value):
+            raise ValueError(f"{field} contains a non-canonical extra name: {value!r}")
 
 
 class CandidateKind(str, Enum):
@@ -62,6 +87,14 @@ class EvidenceStateKind(str, Enum):
     INCOMPLETE = "incomplete"
     MISSING = "missing"
     UNKNOWN = "unknown"
+
+
+class DeclaredExtrasStatus(str, Enum):
+    """How much authoritative metadata is available for candidate extras."""
+
+    COMPLETE = "complete"
+    UNKNOWN = "unknown"
+    MISSING = "missing"
 
 
 class ProofQuantifier(str, Enum):
@@ -186,11 +219,13 @@ class Requirement:
     raw: str | None = None
     parent_candidate_ref: CandidateId | None = None
     activation: MarkerExpression | None = None
+    requested_extras: tuple[str, ...] = ()
     evidence_refs: tuple[TraceRef, ...] = ()
 
     def __post_init__(self) -> None:
         _required(str(self.id), "Requirement.id")
         _required(self.package, "Requirement.package")
+        _validate_extra_names(self.requested_extras, "Requirement.requested_extras")
 
 
 @dataclass(frozen=True)
@@ -199,6 +234,7 @@ class DependencyEdge:
     parent_candidate_ref: CandidateId
     requirement_ref: RequirementId
     activation: MarkerExpression | None = None
+    extra_context: tuple[str, ...] = ()
     raw_dependency: str | None = None
     evidence_refs: tuple[TraceRef, ...] = ()
     source_namespace: str | None = None
@@ -207,6 +243,7 @@ class DependencyEdge:
         _required(str(self.id), "DependencyEdge.id")
         _required(str(self.parent_candidate_ref), "DependencyEdge.parent_candidate_ref")
         _required(str(self.requirement_ref), "DependencyEdge.requirement_ref")
+        _validate_extra_names(self.extra_context, "DependencyEdge.extra_context")
 
 
 @dataclass(frozen=True)
@@ -218,12 +255,24 @@ class Candidate:
     source_ref: str | None = None
     origin: str | None = None
     metadata_ref: TraceRef | None = None
+    declared_extras: tuple[str, ...] = ()
+    declared_extras_status: DeclaredExtrasStatus = DeclaredExtrasStatus.MISSING
 
     def __post_init__(self) -> None:
         _required(str(self.id), "Candidate.id")
         _required(self.package, "Candidate.package")
         if self.source_ref is not None:
             _required(self.source_ref, "Candidate.source_ref")
+        _validate_extra_names(self.declared_extras, "Candidate.declared_extras")
+        if not isinstance(self.declared_extras_status, DeclaredExtrasStatus):
+            raise TypeError("Candidate.declared_extras_status is invalid")
+        if (
+            self.declared_extras_status is not DeclaredExtrasStatus.COMPLETE
+            and self.declared_extras
+        ):
+            raise ValueError(
+                "Candidate.declared_extras requires complete declaration metadata"
+            )
 
 
 @dataclass(frozen=True)

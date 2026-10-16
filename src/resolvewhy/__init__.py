@@ -10,6 +10,7 @@ from .validation import (
 )
 
 __all__ = [
+    "LEGACY_SCHEMA",
     "MAX_JSON_DEPTH",
     "MAX_JSON_NODES",
     "MAX_TRACE_BYTES",
@@ -28,6 +29,7 @@ __all__ = [
     "CoverageAttestation",
     "CoverageAttestationKind",
     "CoverageStatus",
+    "DeclaredExtrasStatus",
     "DependencyEdge",
     "DependencyEdgeId",
     "EvaluationDomain",
@@ -70,6 +72,7 @@ __all__ = [
     "VerificationStatus",
     "VersionConstraint",
     "assert_valid_trace",
+    "canonical_extra_name",
     "deserialize_trace",
     "serialize_trace",
     "serialize_trace_json",

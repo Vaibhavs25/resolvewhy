@@ -7,6 +7,15 @@ Resolvewhy is a bounded verification library, not a general package resolver.
 - Full PEP 508 interactions, build-backend behavior, lockfiles, hash policy,
   system/provided packages, and arbitrary resolver-specific semantics are not
   established.
+- Extras support is deliberately bounded to canonical requested/declared names
+  and simple optional-edge contexts. It covers multiple requests for one
+  candidate plus selected transitive and cyclic activation; arbitrary boolean
+  `extra` marker expressions and universal resolver extras behavior remain
+  unsupported or incomplete, never verified by assumption.
+- Complete declared-extra metadata can disprove an extra declaration for a
+  verification attempt; unknown or missing metadata cannot. Candidate-domain
+  completeness and provenance are still independently required for a verified
+  result.
 - The pip/resolvelib adapter records observable evidence; it does not claim
   that a resolver failure or a pip report enumerates every candidate.
 - CLI, HTTP API, hosted service, and additional resolver adapters are not

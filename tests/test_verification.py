@@ -16,6 +16,7 @@ from resolvewhy.model import (
     CoverageAttestation,
     CoverageAttestationKind,
     CoverageStatus,
+    DeclaredExtrasStatus,
     DependencyEdge,
     EvaluationDomain,
     EvaluationDomainKind,
@@ -273,6 +274,51 @@ def _trace(
 
 
 class ProductionVerifierTests(unittest.TestCase):
+    def _verify_requested_extra(
+        self,
+        declared_status: DeclaredExtrasStatus,
+        *,
+        claim_status: ProofStatus = ProofStatus.SAT,
+    ):
+        ctx = _ctx()
+        candidate = replace(
+            _candidate("pkg", "1.0"),
+            declared_extras=(),
+            declared_extras_status=declared_status,
+        )
+        requirement = replace(
+            _req("pkg", "==", "1.0"),
+            requested_extras=("feature",),
+        )
+        constraint = _constraint(
+            "c:pkg",
+            SemanticConstraintKind.REQUIREMENT,
+            (
+                SemanticLiteral(
+                    kind=SemanticConstraintKind.REQUIREMENT,
+                    package="pkg",
+                    candidate_ref=candidate.id,
+                    operator="==",
+                    value="1.0",
+                ),
+            ),
+            TraceRef(ReferenceKind.REQUIREMENT, requirement.id),
+            "obs:c:pkg",
+        )
+        trace = replace(
+            _trace(
+                contexts=(ctx,),
+                requirements=(requirement,),
+                candidates=(candidate,),
+                domains=(_domain("pkg", ctx, (candidate,)),),
+                constraints=(constraint,),
+            ),
+            schema="resolvewhy-trace/1.1",
+        )
+        return verify(
+            replace(trace, proof_claim=replace(trace.proof_claim, status_claim=claim_status))
+        )
+
     def test_simple_sat_trace(self):
         ctx = _ctx()
         cand = _candidate("pkg", "1.0")
@@ -300,6 +346,140 @@ class ProductionVerifierTests(unittest.TestCase):
         result = verify(trace)
         self.assertEqual(result.status, VerificationStatus.VERIFIED_SAT)
         self.assertTrue(result.independently_verified)
+
+    def test_known_undeclared_requested_extra_is_not_verified_without_optional_edges(self):
+        result = self._verify_requested_extra(DeclaredExtrasStatus.COMPLETE)
+        self.assertEqual(result.status, VerificationStatus.INSUFFICIENT_EVIDENCE)
+        self.assertEqual(result.reasons, ("undeclared_extra",))
+        self.assertEqual(result.issues[0].code, "undeclared_extra")
+        self.assertEqual(result.category, VerificationCategory.INSUFFICIENT_EVIDENCE)
+
+    def test_known_undeclared_requested_extra_does_not_verify_unsat_claim(self):
+        result = self._verify_requested_extra(
+            DeclaredExtrasStatus.COMPLETE,
+            claim_status=ProofStatus.UNSAT,
+        )
+        self.assertEqual(result.status, VerificationStatus.INSUFFICIENT_EVIDENCE)
+        self.assertEqual(result.reasons, ("undeclared_extra",))
+
+    def test_requested_extra_with_missing_declarations_is_non_verified(self):
+        result = self._verify_requested_extra(DeclaredExtrasStatus.MISSING)
+        self.assertEqual(result.status, VerificationStatus.INSUFFICIENT_EVIDENCE)
+        self.assertEqual(result.reasons, ("missing_declared_extras_metadata",))
+
+    def test_requested_extra_with_unknown_declarations_is_non_verified(self):
+        result = self._verify_requested_extra(DeclaredExtrasStatus.UNKNOWN)
+        self.assertEqual(result.status, VerificationStatus.INSUFFICIENT_EVIDENCE)
+        self.assertEqual(result.reasons, ("unknown_declared_extras_metadata",))
+
+    def test_multiple_active_requests_combine_extras_for_one_selected_candidate(self):
+        ctx = _ctx()
+        candidate = replace(
+            _candidate("pkg", "1.0"),
+            declared_extras=("one", "two"),
+            declared_extras_status=DeclaredExtrasStatus.COMPLETE,
+        )
+        one = replace(_req("pkg", "==", "1.0", "one"), requested_extras=("one",))
+        two = replace(_req("pkg", "==", "1.0", "two"), requested_extras=("two",))
+        constraints = tuple(
+            _constraint(
+                f"c:{requirement.id}",
+                SemanticConstraintKind.REQUIREMENT,
+                (
+                    SemanticLiteral(
+                        kind=SemanticConstraintKind.REQUIREMENT,
+                        package="pkg",
+                        candidate_ref=candidate.id,
+                        operator="==",
+                        value="1.0",
+                    ),
+                ),
+                TraceRef(ReferenceKind.REQUIREMENT, requirement.id),
+                f"obs:{requirement.id}",
+            )
+            for requirement in (one, two)
+        )
+        trace = replace(
+            _trace(
+                contexts=(ctx,),
+                requirements=(one, two),
+                candidates=(candidate,),
+                domains=(_domain("pkg", ctx, (candidate,)),),
+                constraints=constraints,
+            ),
+            schema="resolvewhy-trace/1.1",
+        )
+        self.assertEqual(verify(trace).status, VerificationStatus.VERIFIED_SAT)
+
+    def test_transitive_requested_extra_activates_optional_dependency(self):
+        ctx = _ctx()
+        a = replace(
+            _candidate("a", "1.0"),
+            declared_extras=("x",),
+            declared_extras_status=DeclaredExtrasStatus.COMPLETE,
+        )
+        b = replace(
+            _candidate("b", "1.0"),
+            declared_extras=("y",),
+            declared_extras_status=DeclaredExtrasStatus.COMPLETE,
+        )
+        root = replace(_req("a", "==", "1.0"), requested_extras=("x",))
+        b_requirement = replace(
+            _req("b", "==", "1.0", "from-a"),
+            parent_candidate_ref=a.id,
+            requested_extras=("y",),
+        )
+        c_requirement = replace(_req("c", "==", "1.0", "from-b"), parent_candidate_ref=b.id)
+        a_b = DependencyEdge("dep:a-b", a.id, b_requirement.id, extra_context=("x",))
+        b_c = DependencyEdge("dep:b-c", b.id, c_requirement.id, extra_context=("y",))
+        constraints = (
+            _constraint(
+                "c:a", SemanticConstraintKind.REQUIREMENT,
+                (SemanticLiteral(SemanticConstraintKind.REQUIREMENT, "a", a.id, operator="==", value="1.0"),),
+                TraceRef(ReferenceKind.REQUIREMENT, root.id), "obs:c:a",
+            ),
+            _constraint(
+                "c:a-b", SemanticConstraintKind.DEPENDENCY,
+                (SemanticLiteral(SemanticConstraintKind.DEPENDENCY, "b", a.id, operator="==", value="1.0"),),
+                TraceRef(ReferenceKind.DEPENDENCY, a_b.id), "obs:c:a-b",
+            ),
+            _constraint(
+                "c:b-c", SemanticConstraintKind.DEPENDENCY,
+                (SemanticLiteral(SemanticConstraintKind.DEPENDENCY, "c", b.id, operator="==", value="1.0"),),
+                TraceRef(ReferenceKind.DEPENDENCY, b_c.id), "obs:c:b-c",
+            ),
+        )
+        trace = _trace(
+            contexts=(ctx,), requirements=(root, b_requirement, c_requirement), candidates=(a, b),
+            domains=(_domain("a", ctx, (a,)), _domain("b", ctx, (b,)), _domain("c", ctx, ())),
+            dependencies=(a_b, b_c), constraints=constraints,
+        )
+        trace = replace(trace, schema="resolvewhy-trace/1.1", proof_claim=replace(trace.proof_claim, status_claim=ProofStatus.UNSAT))
+        self.assertEqual(verify(trace).status, VerificationStatus.VERIFIED_UNSAT)
+
+    def test_cyclic_optional_extra_activation_reaches_a_fixed_point(self):
+        ctx = _ctx()
+        a = replace(_candidate("a", "1.0"), declared_extras=("x",), declared_extras_status=DeclaredExtrasStatus.COMPLETE)
+        b = replace(_candidate("b", "1.0"), declared_extras=("y",), declared_extras_status=DeclaredExtrasStatus.COMPLETE)
+        root = replace(_req("a", "==", "1.0"), requested_extras=("x",))
+        b_requirement = replace(_req("b", "==", "1.0", "from-a"), parent_candidate_ref=a.id, requested_extras=("y",))
+        a_requirement = replace(_req("a", "==", "1.0", "from-b"), parent_candidate_ref=b.id, requested_extras=("x",))
+        a_b = DependencyEdge("dep:a-b", a.id, b_requirement.id, extra_context=("x",))
+        b_a = DependencyEdge("dep:b-a", b.id, a_requirement.id, extra_context=("y",))
+        constraints = (
+            _constraint("c:a", SemanticConstraintKind.REQUIREMENT, (SemanticLiteral(SemanticConstraintKind.REQUIREMENT, "a", a.id, operator="==", value="1.0"),), TraceRef(ReferenceKind.REQUIREMENT, root.id), "obs:c:a"),
+            _constraint("c:a-b", SemanticConstraintKind.DEPENDENCY, (SemanticLiteral(SemanticConstraintKind.DEPENDENCY, "b", a.id, operator="==", value="1.0"),), TraceRef(ReferenceKind.DEPENDENCY, a_b.id), "obs:c:a-b"),
+            _constraint("c:b-a", SemanticConstraintKind.DEPENDENCY, (SemanticLiteral(SemanticConstraintKind.DEPENDENCY, "a", b.id, operator="==", value="1.0"),), TraceRef(ReferenceKind.DEPENDENCY, b_a.id), "obs:c:b-a"),
+        )
+        trace = replace(
+            _trace(
+                contexts=(ctx,), requirements=(root, b_requirement, a_requirement), candidates=(a, b),
+                domains=(_domain("a", ctx, (a,)), _domain("b", ctx, (b,))),
+                dependencies=(a_b, b_a), constraints=constraints,
+            ),
+            schema="resolvewhy-trace/1.1",
+        )
+        self.assertEqual(verify(trace).status, VerificationStatus.VERIFIED_SAT)
 
     def test_sat_transitive_graph(self):
         ctx = _ctx()

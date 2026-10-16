@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from resolvewhy.model import (
     ArtifactSelectionStatus,
     Candidate,
+    DeclaredExtrasStatus,
     DependencyEdge,
     MarkerExpression,
     Requirement,
@@ -607,6 +608,125 @@ def _constraint_applies(
     return _effective_activation(constraint, literal, activation, context)
 
 
+def _selected_for_literal(
+    assignment: dict[str, Candidate | None],
+    candidate: Candidate | None,
+    literal: SemanticLiteral,
+) -> bool:
+    """Return whether a selected candidate satisfies a literal's identity pin."""
+    if candidate is None:
+        return False
+    if literal.candidate_ref is None:
+        return True
+    return str(candidate.id) == str(literal.candidate_ref)
+
+
+def _active_requested_extras(
+    problem: SemanticProblem,
+    constraints: tuple[SemanticConstraint, ...],
+    context: RuntimeContext,
+    assignment: dict[str, Candidate | None],
+) -> dict[str, set[str]]:
+    """Collect requested extras for candidates selected by active requirements.
+
+    Extra requests are a property of an active requirement/candidate selection,
+    not of an optional edge.  The fixed point also supplies the context used to
+    decide whether an optional edge is active.  This deliberately remains in
+    the semantic layer, so omitting an optional edge cannot suppress checking
+    an otherwise active requirement's requested extras.
+    """
+    candidates = {str(item.id): item for item in problem.candidates}
+    requirements = {str(item.id): item for item in problem.requirements}
+    active: dict[str, set[str]] = {}
+
+    def add(requirement: Requirement, selected: Candidate | None) -> bool:
+        if selected is None or not requirement.requested_extras:
+            return False
+        values = active.setdefault(str(selected.id), set())
+        before = len(values)
+        values.update(requirement.requested_extras)
+        return len(values) != before
+
+    # A dependency can itself request an extra and can unlock another optional
+    # dependency.  Iterate to a finite fixed point over the trace's declared
+    # semantic constraints.
+    changed = True
+    while changed:
+        changed = False
+        for constraint in constraints:
+            source = _constraint_source(problem, constraint)
+            if isinstance(source, Requirement):
+                selected = assignment.get(source.package)
+                for literal in constraint.literals:
+                    if (
+                        _constraint_applies(problem, constraint, literal, context)
+                        and _selected_for_literal(assignment, selected, literal)
+                    ):
+                        changed = add(source, selected) or changed
+                        break
+                continue
+            if not isinstance(source, DependencyEdge):
+                continue
+            parent = candidates.get(str(source.parent_candidate_ref))
+            if parent is None:
+                continue
+            selected_parent = assignment.get(parent.package)
+            if selected_parent is None or str(selected_parent.id) != str(parent.id):
+                continue
+            if source.extra_context and not (
+                active.get(str(parent.id), set()) & set(source.extra_context)
+            ):
+                continue
+            requirement = requirements.get(str(source.requirement_ref))
+            if requirement is None:
+                continue
+            selected = assignment.get(requirement.package)
+            for literal in constraint.literals:
+                if (
+                    _constraint_applies(problem, constraint, literal, context)
+                ):
+                    changed = add(requirement, selected) or changed
+                    break
+    return active
+
+
+def _requested_extras_gap(
+    problem: SemanticProblem,
+    constraints: tuple[SemanticConstraint, ...],
+    context: RuntimeContext,
+    assignment: dict[str, Candidate | None],
+) -> SemanticGap | None:
+    """Classify unsupported evidence for active requested extras.
+
+    A known undeclared extra is not converted into an UNSAT proof: the trace
+    lacks a separately modelled declaration constraint.  Instead verification
+    stays non-authoritative, with a stable diagnostic that distinguishes it
+    from missing or uninspectable metadata.
+    """
+    candidates = {str(item.id): item for item in problem.candidates}
+    for candidate_id, requested in sorted(_active_requested_extras(
+        problem, constraints, context, assignment
+    ).items()):
+        candidate = candidates[candidate_id]
+        if candidate.declared_extras_status is DeclaredExtrasStatus.MISSING:
+            return SemanticGap(
+                "missing_declared_extras_metadata",
+                f"candidate {candidate.id} is selected with requested extras but has no declaration metadata",
+            )
+        if candidate.declared_extras_status is DeclaredExtrasStatus.UNKNOWN:
+            return SemanticGap(
+                "unknown_declared_extras_metadata",
+                f"candidate {candidate.id} is selected with requested extras but declaration metadata is unknown",
+            )
+        undeclared = sorted(requested - set(candidate.declared_extras))
+        if undeclared:
+            return SemanticGap(
+                "undeclared_extra",
+                f"candidate {candidate.id} does not declare requested extra {undeclared[0]!r}",
+            )
+    return None
+
+
 def _check_constraint(
     problem: SemanticProblem,
     constraint: SemanticConstraint,
@@ -664,6 +784,15 @@ def _check_constraint(
             return False, False
         if str(selected_parent.id) != str(parent.id):
             return False, False
+        if dependency.extra_context:
+            active_extras = _active_requested_extras(
+                problem,
+                problem.semantic_constraints,
+                context,
+                assignment,
+            ).get(str(parent.id), set())
+            if not active_extras.intersection(dependency.extra_context):
+                return False, False
         for literal in constraint.literals:
             if not _constraint_applies(problem, constraint, literal, context):
                 continue
@@ -759,6 +888,7 @@ def evaluate_branch(
     context: RuntimeContext,
     *,
     max_states: int = 100_000,
+    extra_diagnostics: list[SemanticGap] | None = None,
 ) -> BranchOutcome:
     _policy_is_supported(problem.resolution_policy)
     domains = _candidate_domain_map(problem, context)
@@ -796,6 +926,12 @@ def evaluate_branch(
                 if unknown:
                     unknown_possible = True
                     return False
+            extra_gap = _requested_extras_gap(problem, constraints, context, assignment)
+            if extra_gap is not None:
+                if extra_diagnostics is not None and not extra_diagnostics:
+                    extra_diagnostics.append(extra_gap)
+                unknown_possible = True
+                return False
             return True
 
         package = packages[index]

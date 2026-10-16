@@ -16,6 +16,8 @@ from test_semantic_core import valid_trace
 
 from resolvewhy.model import (
     CandidateKind,
+    DeclaredExtrasStatus,
+    DependencyEdge,
     EvidenceStateKind,
     IncompatibilityObservation,
     ProofQuantifier,
@@ -24,6 +26,7 @@ from resolvewhy.model import (
     TraceRef,
 )
 from resolvewhy.trace import (
+    LEGACY_SCHEMA,
     MAX_JSON_DEPTH,
     MAX_JSON_NODES,
     MAX_TRACE_BYTES,
@@ -46,8 +49,52 @@ class TraceFormatTests(unittest.TestCase):
 
     def test_deserialization(self):
         trace = deserialize_trace(FIXTURE.read_bytes())
-        self.assertEqual(trace.schema, SCHEMA)
+        self.assertEqual(trace.schema, LEGACY_SCHEMA)
+        self.assertEqual(
+            trace.candidates[0].declared_extras_status,
+            DeclaredExtrasStatus.MISSING,
+        )
         self.assertEqual(trace.candidates[0].package, "a")
+
+    def test_v1_1_extras_round_trip(self):
+        trace = valid_trace()
+        requirement = replace(trace.requirements[0], requested_extras=("feature",))
+        candidate = replace(
+            trace.candidates[0],
+            declared_extras=("feature",),
+            declared_extras_status=DeclaredExtrasStatus.COMPLETE,
+        )
+        edge = DependencyEdge(
+            id="dep:a-feature",
+            parent_candidate_ref=candidate.id,
+            requirement_ref=requirement.id,
+            extra_context=("feature",),
+        )
+        trace = replace(
+            trace,
+            schema=SCHEMA,
+            requirements=(requirement,),
+            candidates=(candidate,),
+            dependencies=(edge,),
+        )
+        payload = serialize_trace(trace)
+        self.assertIn(b'"schema":"resolvewhy-trace/1.1"', payload)
+        self.assertIn(b'"requested_extras":["feature"]', payload)
+        self.assertIn(b'"extra_context":["feature"]', payload)
+        self.assertEqual(deserialize_trace(payload), trace)
+
+    def test_legacy_v1_0_rejects_v1_1_extras_fields(self):
+        payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        payload["requirements"][0]["requested_extras"] = []
+        with self.assertRaises(TraceDecodeError):
+            deserialize_trace(json.dumps(payload))
+
+    def test_noncanonical_extra_name_rejected_at_decoder_boundary(self):
+        trace = replace(valid_trace(), schema=SCHEMA)
+        payload = json.loads(serialize_trace(trace))
+        payload["requirements"][0]["requested_extras"] = ["Feature_Name"]
+        with self.assertRaisesRegex(TraceDecodeError, "canonical extra spelling"):
+            deserialize_trace(json.dumps(payload))
 
     def test_semantic_round_trip_equality(self):
         trace = valid_trace()

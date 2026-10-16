@@ -5,7 +5,7 @@
 
 ## 1. Purpose
 
-The adapter converts structured evidence observed at the resolvelib provider/reporter boundary into the production semantic model and then into `resolvewhy-trace/1.0`.
+The adapter converts structured evidence observed at the resolvelib provider/reporter boundary into the production semantic model and then into `resolvewhy-trace/1.1`.
 
 ```
 resolvelib provider/reporter
@@ -20,7 +20,7 @@ pip/resolvelib semantic normalization
 resolvewhy.model.Trace
           |
           v
-resolvewhy-trace/1.0
+resolvewhy-trace/1.1
 ```
 
 The adapter never treats a resolver diagnostic string as proof.
@@ -86,12 +86,14 @@ The accessor deliberately exposes a limited semantic surface:
 
 - package/name;
 - version constraints supported by the validated six comparison operators;
+- canonical requested extras and simple `extra == "name"` optional-edge markers;
 - raw requirement text;
 - packaging marker expressions where the supplied object exposes its structured marker AST;
 - explicit candidate lookup when exposed;
 - candidate source/origin facts where observable;
 - artifact origin/hash/yank observations where observable;
 - candidate Requires-Python metadata where observable.
+- candidate `Provides-Extra` metadata where observable.
 
 Unsupported or unreadable fields are recorded as incomplete evidence rather than silently inferred.
 
@@ -111,6 +113,11 @@ Constraint order is not a semantic commitment: the conjunction `>=1,<3` is equiv
 
 Unsupported operators/wildcards do not become false facts. They make the relevant evidence incomplete.
 
+The tested compatible-release normalization is conjunctive: `~=1.4.5` becomes
+`>=1.4.5,<1.5`, and `~=1.4` becomes `>=1.4,<2.0`. Other compatible-release
+forms outside this numeric fragment remain incomplete, including when a
+requirement requests extras.
+
 ## 7. Activation and markers
 
 Activation is preserved as a structured `MarkerExpression` rather than flattened into a Boolean result during capture.
@@ -118,6 +125,21 @@ Activation is preserved as a structured `MarkerExpression` rather than flattened
 The adapter currently parses the structured packaging marker representation exposed by the supplied requirement object. If that representation is unavailable or has an unsupported shape, the trace records an incomplete semantic condition.
 
 The adapter does not implement the full PEP 508 language in Phase 3A.
+
+## 7A. Extras
+
+Requested extras are canonicalized before they enter the model. A simple
+`extra == "name"` dependency marker becomes the edge's explicit
+`extra_context`; the semantic layer activates such edges only when the parent
+candidate has that active requested extra. Combined or otherwise unsupported
+extra-marker expressions remain incomplete rather than being made
+unconditional.
+
+Candidate declaration metadata is recorded as `complete`, `unknown`, or
+`missing`. A complete empty declaration is distinct from unavailable metadata.
+When two native objects collapse to one candidate identity but disagree about
+declared extras, normalization preserves neither set as authoritative: it
+emits `unknown` metadata and incomplete evidence.
 
 ## 8. Candidate identity
 
@@ -305,7 +327,7 @@ Where an external `resolvelib` installation is unavailable, the test suite can u
 The current adapter does not claim complete support for:
 
 - full PEP 508 grammar and all marker interactions;
-- complete extras propagation;
+- full PEP 508 extras-marker grammar or every resolver-specific extras flow;
 - dynamic build-backend metadata generation;
 - build-environment side effects;
 - full wheel/sdist selection semantics;

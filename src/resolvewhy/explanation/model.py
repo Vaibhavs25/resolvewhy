@@ -30,6 +30,7 @@ class ExplanationDependencyPath:
     requirement_ref:str|None
     dependency_ref:str|None
     parent_candidate_ref:str|None
+    extra_context:tuple[str,...]=()
 @dataclass(frozen=True)
 class ExplanationCandidate:
     id:str

@@ -21,7 +21,7 @@ from resolvewhy.solving.semantics import (
     _validate_constraint_shape,
 )
 from resolvewhy.solving.solver import SolveStatus, solve
-from resolvewhy.trace import SCHEMA, TraceDecodeError, deserialize_trace
+from resolvewhy.trace import LEGACY_SCHEMA, SCHEMA, TraceDecodeError, deserialize_trace
 from resolvewhy.validation import validate_trace
 
 from .result import VerificationIssue, VerificationResult
@@ -457,13 +457,14 @@ def verify(trace: Trace) -> VerificationResult:
     if not isinstance(trace, Trace):
         raise TypeError("verify expects a resolvewhy.model.Trace")
 
-    if trace.schema != SCHEMA:
+    if trace.schema not in {LEGACY_SCHEMA, SCHEMA}:
         return _invalid(
             trace,
             (
                 _issue(
                     "invalid_schema",
-                    f"unsupported production schema {trace.schema!r}; expected {SCHEMA!r}",
+                    f"unsupported production schema {trace.schema!r}; expected "
+                    f"{LEGACY_SCHEMA!r} or {SCHEMA!r}",
                 ),
             ),
         )

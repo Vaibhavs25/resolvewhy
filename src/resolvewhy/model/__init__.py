@@ -15,6 +15,7 @@ from .core import (
     CoverageAttestation,
     CoverageAttestationKind,
     CoverageStatus,
+    DeclaredExtrasStatus,
     DependencyEdge,
     DependencyEdgeId,
     EvaluationDomain,
@@ -52,6 +53,7 @@ from .core import (
     TraceScope,
     VerificationStatus,
     VersionConstraint,
+    canonical_extra_name,
 )
 
 __all__ = [
@@ -69,6 +71,7 @@ __all__ = [
     "CoverageAttestation",
     "CoverageAttestationKind",
     "CoverageStatus",
+    "DeclaredExtrasStatus",
     "DependencyEdge",
     "DependencyEdgeId",
     "EvaluationDomain",
@@ -106,4 +109,5 @@ __all__ = [
     "TraceScope",
     "VerificationStatus",
     "VersionConstraint",
+    "canonical_extra_name",
 ]

@@ -62,7 +62,7 @@ reinterpret as resolver results.
 
 **Phase 1 — Production Semantic Core:** complete.
 
-**Phase 2 — Production Trace Format:** complete as `resolvewhy-trace/1.0`.
+**Phase 2 — Production Trace Format:** extras-aware writes use `resolvewhy-trace/1.1`; strict historical `1.0` traces remain readable.
 
 **Phase 3A — pip/resolvelib Adapter:** implemented and covered by controlled
 pip/resolvelib integration tests. The CI workflow runs the production suite,
@@ -70,7 +70,7 @@ research tests, and reproducibility harness on the supported Linux and Windows
 Python versions. These checks validate the declared finite implementation; they
 do not establish general resolver correctness.
 
-**Phase 4A — Production Independent Verifier:** implemented for the declared finite semantic fragment. The verifier independently reconstructs and evaluates production `resolvewhy-trace/1.0` traces and returns typed `VERIFIED_SAT`, `VERIFIED_UNSAT`, `INSUFFICIENT_EVIDENCE`, or `INVALID_TRACE` results. It does not import the research verifier or depend on a resolver.
+**Phase 4A — Production Independent Verifier:** implemented for the declared finite semantic fragment. The verifier independently reconstructs and evaluates supported production `resolvewhy-trace/1.0` and `1.1` traces and returns typed `VERIFIED_SAT`, `VERIFIED_UNSAT`, `INSUFFICIENT_EVIDENCE`, or `INVALID_TRACE` results. It does not import the research verifier or depend on a resolver.
 
 Phase 4B — Independent Solver + Minimal-Core Engine: implemented and tested for the established finite semantic fragment. The reusable solver operates on a typed semantic problem, independently computes SAT/UNSAT, and provides deterministic subset-minimal core extraction and core verification. Phase 4B does not imply general production readiness. Unsupported semantics continue to fail closed, and the explanation layer, CLI/API, and additional resolver adapters remain future work.
 
@@ -78,7 +78,7 @@ See `docs/PRODUCTION_SEMANTIC_CORE.md`, `docs/PRODUCTION_TRACE_FORMAT.md`, `docs
 
 ## Production trace format
 
-**Phase 2 — Production Trace Format:** implemented as `resolvewhy-trace/1.0`.
+**Phase 2 — Production Trace Format:** implemented with `1.1` extras fields and strict `1.0` historical reads.
 
 The production trace boundary provides deterministic UTF-8 JSON serialization and safe reconstruction of the typed semantic model. Unknown schema versions, unknown fields, malformed references, invalid enums, malformed markers, and invalid proof/coverage structures are rejected; incomplete evidence remains distinguishable from invalid structure.
 
@@ -134,7 +134,7 @@ Run `python research/run_reproducibility.py` for the clean, network-free researc
 
 ### Supported only in reduced/tested form
 
-Nested and/or PEP 508 markers, extras, wheel/sdist mixtures, local/editable/workspace candidates, hash constraints, lockfile restrictions, richer artifact-selection rules, and multi-dimensional environment partitions are semantically representable in the model, but their full interactions have not been independently established.
+Nested and/or PEP 508 markers, arbitrary extras-marker combinations, wheel/sdist mixtures, local/editable/workspace candidates, hash constraints, lockfile restrictions, richer artifact-selection rules, and multi-dimensional environment partitions are semantically representable in the model, but their full interactions have not been independently established. The bounded extras model checks canonical requested/declared names and simple optional-edge contexts; missing or unknown metadata is not treated as an empty declaration.
 
 ### Outside the current guarantee
 

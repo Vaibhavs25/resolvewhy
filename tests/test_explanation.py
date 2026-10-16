@@ -187,6 +187,16 @@ class ExplanationTests(unittest.TestCase):
         self.assertTrue(e.dependency_paths)
         self.assertTrue(all(x.dependency_ref or x.requirement_ref for x in e.dependency_paths))
 
+    def test_optional_dependency_extra_context_is_rendered(self):
+        trace=make_trace(dependency=True)
+        trace=replace(
+            trace,
+            schema="resolvewhy-trace/1.1",
+            dependencies=(replace(trace.dependencies[0],extra_context=("feature",)),),
+        )
+        p,r=self.verified(trace)
+        self.assertIn("extra: feature",render_explanation(build_explanation(p,r)))
+
     def test_candidate_references(self):
         p,r=self.verified(make_trace())
         e=build_explanation(p,r)

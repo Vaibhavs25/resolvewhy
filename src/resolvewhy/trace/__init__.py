@@ -1,6 +1,7 @@
 """Versioned production trace format for resolvewhy."""
 
 from .codec import (
+    LEGACY_SCHEMA,
     MAX_JSON_DEPTH,
     MAX_JSON_NODES,
     MAX_TRACE_BYTES,
@@ -13,6 +14,7 @@ from .codec import (
 )
 
 __all__ = [
+    "LEGACY_SCHEMA",
     "MAX_JSON_DEPTH",
     "MAX_JSON_NODES",
     "MAX_TRACE_BYTES",

@@ -17,6 +17,7 @@ from resolvewhy.model import (
     ConstraintId,
     CoverageAttestation,
     CoverageStatus,
+    DeclaredExtrasStatus,
     DependencyEdge,
     DependencyEdgeId,
     EvaluationDomain,
@@ -51,6 +52,7 @@ from resolvewhy.model import (
     TraceRef,
     TraceScope,
     VersionConstraint,
+    canonical_extra_name,
 )
 
 from .capture import (
@@ -91,6 +93,8 @@ class RequirementView:
     constraints: tuple[VersionConstraint, ...] = ()
     raw: str | None = None
     activation: MarkerExpression | None = None
+    requested_extras: tuple[str, ...] = ()
+    extra_context: tuple[str, ...] = ()
     explicit_candidate: object | None = None
     complete: bool = True
     unsupported_reasons: tuple[str, ...] = ()
@@ -105,6 +109,8 @@ class CandidateView:
     origin: str | None = None
     artifacts: tuple[ArtifactView, ...] = ()
     requires_python: tuple[VersionConstraint, ...] = ()
+    declared_extras: tuple[str, ...] = ()
+    declared_extras_status: DeclaredExtrasStatus = DeclaredExtrasStatus.MISSING
     identity_complete: bool = True
     unsupported_reasons: tuple[str, ...] = ()
 
@@ -148,6 +154,74 @@ def _read_first_attr(obj: object, names: tuple[str, ...]) -> object | None:
     return None
 
 
+def _canonical_extra_values(value: object | None) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Normalize an observable native extra collection or report why it is unsafe."""
+    if value is None:
+        return (), ()
+    if isinstance(value, (str, bytes)):
+        return (), ("extra metadata is not an iterable of names",)
+    try:
+        raw_values: tuple[object, ...] = tuple(value)  # type: ignore[arg-type]
+    except TypeError:
+        return (), ("extra metadata could not be inspected",)
+    normalized: set[str] = set()
+    for raw in raw_values:
+        if not isinstance(raw, str):
+            return (), ("extra metadata contains a non-string name",)
+        try:
+            normalized.add(canonical_extra_name(raw))
+        except ValueError:
+            return (), ("extra metadata contains an invalid name",)
+    return tuple(sorted(normalized)), ()
+
+
+def _extra_marker_context(marker: object | None) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Extract a simple ``extra == 'name'`` marker for an optional edge.
+
+    More elaborate boolean combinations stay explicitly incomplete.  Treating
+    them as an unconditional dependency would be unsound.
+    """
+    if marker is None:
+        return (), ()
+    markers = getattr(marker, "_markers", None)
+    # ``packaging`` currently exposes an AST list containing a single
+    # three-item tuple, while older compatible implementations may expose the
+    # tuple directly.  Accept those two equivalent simple shapes only.
+    simple = markers[0] if isinstance(markers, list) and len(markers) == 1 else markers
+    if not isinstance(simple, tuple) or len(simple) != 3:
+        if "extra" in str(markers):
+            return (), ("combined extra marker is outside the supported fragment",)
+        return (), ()
+    variable, operator, value = simple
+    if str(variable) != "extra":
+        return (), ()
+    value_text = getattr(value, "value", value)
+    if str(operator) != "==" or not isinstance(value_text, str):
+        return (), ("unsupported extra marker",)
+    values, errors = _canonical_extra_values((value_text,))
+    return values, errors
+
+
+def _compatible_release_constraints(version: str) -> tuple[tuple[VersionConstraint, ...], str | None]:
+    """Normalize the tested numeric compatible-release subset to a conjunction."""
+    pieces = version.split(".")
+    if len(pieces) < 2 or any(not piece.isdigit() for piece in pieces):
+        return (), f"unsupported compatible-release version: {version}"
+    upper_prefix = [int(piece) for piece in pieces[:-1]]
+    upper_prefix[-1] += 1
+    # Preserve the project’s tested normal forms: ``~=1.4`` uses ``<2.0``
+    # while ``~=1.4.5`` uses ``<1.5``.
+    upper_parts = upper_prefix + ([0] if len(upper_prefix) == 1 else [])
+    upper = ".".join(str(piece) for piece in upper_parts)
+    return (
+        (
+            VersionConstraint(">=", version),
+            VersionConstraint("<", upper),
+        ),
+        None,
+    )
+
+
 def _specifier_constraints(specifier: object | None) -> tuple[tuple[VersionConstraint, ...], tuple[str, ...]]:
     if specifier is None:
         return (), ()
@@ -167,6 +241,13 @@ def _specifier_constraints(specifier: object | None) -> tuple[tuple[VersionConst
             continue
         op = str(operator)
         ver = str(version)
+        if op == "~=":
+            compatible, reason = _compatible_release_constraints(ver)
+            if reason is not None:
+                unsupported.append(reason)
+            else:
+                constraints.extend(compatible)
+            continue
         if op not in SUPPORTED_VERSION_OPERATORS:
             unsupported.append(f"unsupported version operator: {op}")
             continue
@@ -229,6 +310,51 @@ def _marker_expression_from_packaging(marker: object | None) -> tuple[MarkerExpr
         return None, (f"unsupported marker expression: {exc}",)
 
 
+def _declared_extras_from_candidate(
+    candidate: object,
+) -> tuple[tuple[str, ...], DeclaredExtrasStatus, tuple[str, ...]]:
+    """Read candidate declaration metadata without inferring an empty set."""
+    direct = _read_first_attr(candidate, ("declared_extras", "provided_extras"))
+    if direct is not None:
+        values, errors = _canonical_extra_values(direct)
+        return (
+            values if not errors else (),
+            DeclaredExtrasStatus.COMPLETE if not errors else DeclaredExtrasStatus.UNKNOWN,
+            errors,
+        )
+
+    dist = _read_first_attr(candidate, ("dist",))
+    if dist is None:
+        return (), DeclaredExtrasStatus.MISSING, ()
+    iterator = getattr(dist, "iter_provided_extras", None)
+    if callable(iterator):
+        try:
+            values, errors = _canonical_extra_values(iterator())
+        except Exception:  # noqa: BLE001 - provider metadata access is untrusted.
+            return (), DeclaredExtrasStatus.UNKNOWN, ("declared extra metadata could not be inspected",)
+        return (
+            values if not errors else (),
+            DeclaredExtrasStatus.COMPLETE if not errors else DeclaredExtrasStatus.UNKNOWN,
+            errors,
+        )
+
+    metadata = _read_first_attr(dist, ("metadata",))
+    if metadata is None:
+        return (), DeclaredExtrasStatus.MISSING, ()
+    get_all = getattr(metadata, "get_all", None)
+    if not callable(get_all):
+        return (), DeclaredExtrasStatus.UNKNOWN, ("declared extra metadata has no get_all accessor",)
+    try:
+        values, errors = _canonical_extra_values(get_all("Provides-Extra") or ())
+    except Exception:  # noqa: BLE001 - metadata providers may fail lazily.
+        return (), DeclaredExtrasStatus.UNKNOWN, ("declared extra metadata could not be inspected",)
+    return (
+        values if not errors else (),
+        DeclaredExtrasStatus.COMPLETE if not errors else DeclaredExtrasStatus.UNKNOWN,
+        errors,
+    )
+
+
 @dataclass(frozen=True)
 class DefaultPipSemantics:
     """Best-effort pip-object adapter with explicit fail-closed gaps.
@@ -272,7 +398,16 @@ class DefaultPipSemantics:
             parsed = _read_first_attr(ireq, ("req",)) if ireq is not None else None
             marker = _read_first_attr(parsed, ("marker",)) if parsed is not None else None
 
-        activation, marker_unsupported = _marker_expression_from_packaging(marker)
+        extra_context, extra_marker_unsupported = _extra_marker_context(marker)
+        activation: MarkerExpression | None
+        marker_unsupported: tuple[str, ...]
+        if extra_context:
+            # The simple extra marker is represented by DependencyEdge
+            # extra_context rather than as a runtime marker variable.
+            activation, marker_unsupported = None, ()
+        else:
+            activation, marker_unsupported = _marker_expression_from_packaging(marker)
+        unsupported.extend(extra_marker_unsupported)
         unsupported.extend(marker_unsupported)
 
         explicit_candidate = None
@@ -285,19 +420,20 @@ class DefaultPipSemantics:
                 unsupported.append("candidate lookup could not be inspected")
 
         extras = _read_first_attr(requirement, ("extras",))
-        project_name = _read_first_attr(requirement, ("project_name",))
-        if extras and project_name is not None:
-            try:
-                if isinstance(extras, Iterable) and tuple(extras):
-                    unsupported.append("extras are retained as raw/native evidence; full extras semantics are outside Phase 3A")
-            except TypeError:
-                unsupported.append("extras could not be inspected")
+        if extras is None:
+            ireq = _read_first_attr(requirement, ("_ireq",))
+            parsed = _read_first_attr(ireq, ("req",)) if ireq is not None else None
+            extras = _read_first_attr(parsed, ("extras",)) if parsed is not None else None
+        requested_extras, extras_unsupported = _canonical_extra_values(extras)
+        unsupported.extend(extras_unsupported)
 
         return RequirementView(
             package=package_text,
             constraints=constraints,
             raw=raw,
             activation=activation,
+            requested_extras=requested_extras,
+            extra_context=extra_context,
             explicit_candidate=explicit_candidate,
             complete=not unsupported,
             unsupported_reasons=tuple(unsupported),
@@ -388,6 +524,11 @@ class DefaultPipSemantics:
         requires_python, python_unsupported = _specifier_constraints_from_value(requires_python_value)
         unsupported.extend(python_unsupported)
 
+        declared_extras, declared_extras_status, extra_metadata_unsupported = (
+            _declared_extras_from_candidate(candidate)
+        )
+        unsupported.extend(extra_metadata_unsupported)
+
         identity_complete = bool(package_text and version is not None)
         if kind is not CandidateKind.REGISTRY and not (source_ref or link_url):
             identity_complete = False
@@ -401,6 +542,8 @@ class DefaultPipSemantics:
             origin=link_url,
             artifacts=artifacts,
             requires_python=requires_python,
+            declared_extras=declared_extras,
+            declared_extras_status=declared_extras_status,
             identity_complete=identity_complete,
             unsupported_reasons=tuple(unsupported),
         )
@@ -462,7 +605,16 @@ def normalize_capture(
     def _merge_candidate_views(existing: CandidateView, incoming: CandidateView) -> CandidateView:
         artifacts = tuple(dict.fromkeys(existing.artifacts + incoming.artifacts))
         requires_python = tuple(dict.fromkeys(existing.requires_python + incoming.requires_python))
-        unsupported = tuple(dict.fromkeys(existing.unsupported_reasons + incoming.unsupported_reasons))
+        extra_metadata_conflict = (
+            existing.declared_extras != incoming.declared_extras
+            or existing.declared_extras_status is not incoming.declared_extras_status
+        )
+        unsupported_values = existing.unsupported_reasons + incoming.unsupported_reasons
+        if extra_metadata_conflict:
+            unsupported_values += (
+                "conflicting declared-extra metadata for the same candidate identity",
+            )
+        unsupported = tuple(dict.fromkeys(unsupported_values))
         return CandidateView(
             package=existing.package,
             version=existing.version,
@@ -471,6 +623,14 @@ def normalize_capture(
             origin=existing.origin,
             artifacts=artifacts,
             requires_python=requires_python,
+            declared_extras=(
+                () if extra_metadata_conflict else existing.declared_extras
+            ),
+            declared_extras_status=(
+                DeclaredExtrasStatus.UNKNOWN
+                if extra_metadata_conflict
+                else existing.declared_extras_status
+            ),
             identity_complete=existing.identity_complete and incoming.identity_complete,
             unsupported_reasons=unsupported,
         )
@@ -550,6 +710,7 @@ def normalize_capture(
                 raw=view.raw,
                 parent_candidate_ref=parent_ref,
                 activation=view.activation,
+                requested_extras=view.requested_extras,
                 evidence_refs=(TraceRef(ReferenceKind.EVIDENCE, f"obs:req:{ref}"),),
             )
         )
@@ -595,6 +756,7 @@ def normalize_capture(
                 raw=view.raw,
                 parent_candidate_ref=parent_ref,
                 activation=view.activation,
+                requested_extras=view.requested_extras,
                 evidence_refs=(TraceRef(ReferenceKind.EVIDENCE, f"obs:req:{req_ref}"),),
             )
         )
@@ -736,6 +898,7 @@ def normalize_capture(
             parent_candidate_ref=parent_ref,
             requirement_ref=req_ref,
             activation=view.activation,
+            extra_context=view.extra_context,
             raw_dependency=view.raw,
             evidence_refs=(TraceRef(ReferenceKind.EVIDENCE, f"obs:{edge_ref}"),),
             source_namespace=semantics.namespace
@@ -1041,12 +1204,14 @@ def normalize_capture(
                 if candidate_view.kind is not CandidateKind.REGISTRY
                 else None
             ),
+            declared_extras=candidate_view.declared_extras,
+            declared_extras_status=candidate_view.declared_extras_status,
         )
         for ref, candidate_view in candidate_views.items()
     ]
 
     return Trace(
-        schema="resolvewhy-trace/1.0",
+        schema="resolvewhy-trace/1.1",
         resolver_name=context.resolver_name,
         resolver_version=context.resolver_version,
         resolver_commit=context.resolver_commit,
