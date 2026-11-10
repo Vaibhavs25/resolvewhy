@@ -290,19 +290,28 @@ def _marker_expression_from_packaging(marker: object | None) -> tuple[MarkerExpr
         if len(node) < 3 or len(node) % 2 == 0:
             raise ValueError("marker boolean expression has invalid shape")
 
-        expr = parse(node[0])
+        # PEP 508 marker expressions give "and" higher precedence than "or".
+        # The packaging AST preserves parentheses as nested lists but leaves
+        # unparenthesized combinations in a flat sequence. Do not fold that
+        # sequence left-to-right: (A or B) and C is not A or (B and C).
+        or_terms: list[MarkerExpression] = []
+        and_term = parse(node[0])
         index = 1
         while index < len(node):
             operator = str(node[index])
             if operator not in {"and", "or"}:
                 raise ValueError(f"unsupported marker boolean operator: {operator!r}")
             right = parse(node[index + 1])
-            expr = MarkerExpression(
-                kind=cast(Literal["atom", "and", "or", "not"], operator),
-                children=(expr, right),
-            )
+            if operator == "and":
+                and_term = MarkerExpression(kind="and", children=(and_term, right))
+            else:
+                or_terms.append(and_term)
+                and_term = right
             index += 2
-        return expr
+        if not or_terms:
+            return and_term
+        or_terms.append(and_term)
+        return MarkerExpression(kind="or", children=tuple(or_terms))
 
     try:
         return parse(markers), ()
