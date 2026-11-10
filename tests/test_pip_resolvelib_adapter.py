@@ -253,6 +253,52 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertTrue(view.activation is not None)
         self.assertEqual(view.activation.kind, "atom")
 
+    def test_mixed_marker_boolean_precedence_matches_packaging(self):
+        from resolvewhy.solving.semantics import eval_marker
+
+        requirement = Requirement(
+            'pkg; python_version < "3.11" or os_name == "posix" '
+            'and implementation_name == "cpython"'
+        )
+        view = DefaultPipSemantics().requirement_view(requirement)
+        self.assertTrue(view.complete)
+        self.assertIsNotNone(view.activation)
+        runtime = replace(
+            self.context().runtime_context,
+            python_version="3.10",
+            marker_values=(
+                ("implementation_name", "PyPy"),
+                ("os_name", "nt"),
+                ("python_version", "3.10"),
+            ),
+        )
+        self.assertTrue(requirement.marker.evaluate(environment=dict(runtime.marker_values)))
+        self.assertTrue(eval_marker(view.activation, runtime))
+        self.assertEqual(view.activation.kind, "or")
+
+    def test_parenthesized_marker_boolean_precedence_matches_packaging(self):
+        from resolvewhy.solving.semantics import eval_marker
+
+        requirement = Requirement(
+            'pkg; (python_version < "3.11" or os_name == "posix") '
+            'and implementation_name == "cpython"'
+        )
+        view = DefaultPipSemantics().requirement_view(requirement)
+        self.assertTrue(view.complete)
+        self.assertIsNotNone(view.activation)
+        runtime = replace(
+            self.context().runtime_context,
+            python_version="3.10",
+            marker_values=(
+                ("implementation_name", "PyPy"),
+                ("os_name", "nt"),
+                ("python_version", "3.10"),
+            ),
+        )
+        self.assertFalse(requirement.marker.evaluate(environment=dict(runtime.marker_values)))
+        self.assertFalse(eval_marker(view.activation, runtime))
+        self.assertEqual(view.activation.kind, "and")
+
     def test_conjunctive_version_constraints_and_exclusion_are_not_dropped(self):
         semantics = DefaultPipSemantics()
         view = semantics.requirement_view(Requirement("c>=1,!=1.5,<3"))
