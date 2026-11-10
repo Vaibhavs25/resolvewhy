@@ -267,9 +267,9 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
             self.context().runtime_context,
             python_version="3.10",
             marker_values=(
-                ("python_version", "3.10"),
-                ("os_name", "nt"),
                 ("implementation_name", "PyPy"),
+                ("os_name", "nt"),
+                ("python_version", "3.10"),
             ),
         )
         self.assertTrue(requirement.marker.evaluate(environment=dict(runtime.marker_values)))
@@ -290,9 +290,9 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
             self.context().runtime_context,
             python_version="3.10",
             marker_values=(
-                ("python_version", "3.10"),
-                ("os_name", "nt"),
                 ("implementation_name", "PyPy"),
+                ("os_name", "nt"),
+                ("python_version", "3.10"),
             ),
         )
         self.assertFalse(requirement.marker.evaluate(environment=dict(runtime.marker_values)))
