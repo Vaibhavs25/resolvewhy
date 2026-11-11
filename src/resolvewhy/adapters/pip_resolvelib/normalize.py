@@ -728,6 +728,21 @@ def normalize_capture(
 
     for event in requirement_events:
         view = semantics.requirement_view(event.requirement)
+        if event.parent is None and view.extra_context:
+            # The extra predicate is meaningful only for an optional
+            # dependency of a particular parent distribution. A root
+            # requirement has no parent whose active extras can be checked;
+            # dropping extra_context would silently make it unconditional.
+            view = replace(
+                view,
+                complete=False,
+                unsupported_reasons=tuple(
+                    dict.fromkeys(
+                        view.unsupported_reasons
+                        + ("root extra marker has no parent candidate context",)
+                    )
+                ),
+            )
         ref = _identifier(f"req:{event.sequence:04d}", RequirementId)
         identifier = semantics.identifier_text(
             getattr(event.requirement, "name", getattr(event.requirement, "project_name", view.package))
