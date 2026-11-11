@@ -319,6 +319,76 @@ class ProductionVerifierTests(unittest.TestCase):
             replace(trace, proof_claim=replace(trace.proof_claim, status_claim=claim_status))
         )
 
+    def test_raw_extra_runtime_marker_cannot_verify_sat(self):
+        # An adversarial trace must not turn "extra" into a global runtime
+        # marker and thereby bypass parent-scoped optional-dependency checks.
+        ctx = replace(
+            _ctx(),
+            marker_values=(
+                ("extra", "feature"),
+                ("platform_machine", "x86_64"),
+                ("python_full_version", "3.11.9"),
+                ("python_version", "3.11"),
+                ("sys_platform", "linux"),
+            ),
+        )
+        candidate = _candidate("pkg", "1.0")
+        req = replace(
+            _req("pkg", "==", "1.0"),
+            activation=MarkerExpression(
+                kind="atom",
+                atom=MarkerAtom(variable="extra", operator="==", value="feature"),
+            ),
+        )
+        constraint = _constraint(
+            "c:pkg",
+            SemanticConstraintKind.REQUIREMENT,
+            (SemanticLiteral(
+                kind=SemanticConstraintKind.REQUIREMENT,
+                package="pkg",
+                candidate_ref=candidate.id,
+                operator="==",
+                value="1.0",
+            ),),
+            TraceRef(ReferenceKind.REQUIREMENT, req.id),
+            "obs:c:pkg",
+        )
+        trace = replace(
+            _trace(
+                contexts=(ctx,),
+                requirements=(req,),
+                candidates=(candidate,),
+                domains=(_domain("pkg", ctx, (candidate,)),),
+                constraints=(constraint,),
+            ),
+            schema="resolvewhy-trace/1.1",
+        )
+        result = verify(trace)
+        self.assertEqual(result.status, VerificationStatus.INSUFFICIENT_EVIDENCE)
+        self.assertEqual(result.reasons, ("unsupported_extra_marker_semantics",))
+        self.assertFalse(result.independently_verified)
+
+    def test_short_circuited_raw_extra_marker_also_fails_closed(self):
+        from resolvewhy.solving.semantics import SemanticGap, eval_marker
+
+        ctx = _ctx()
+        expression = MarkerExpression(
+            kind="or",
+            children=(
+                MarkerExpression(
+                    kind="atom",
+                    atom=MarkerAtom("python_version", "==", "3.11"),
+                ),
+                MarkerExpression(
+                    kind="atom",
+                    atom=MarkerAtom("extra", "==", "feature"),
+                ),
+            ),
+        )
+        with self.assertRaises(SemanticGap) as raised:
+            eval_marker(expression, ctx)
+        self.assertEqual(raised.exception.code, "unsupported_extra_marker_semantics")
+
     def test_simple_sat_trace(self):
         ctx = _ctx()
         cand = _candidate("pkg", "1.0")
