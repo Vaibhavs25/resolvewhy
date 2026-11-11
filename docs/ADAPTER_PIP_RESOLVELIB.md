@@ -392,5 +392,8 @@ a runtime marker activation. A nested runtime-only group such as
 is represented without expanding extra selection into global runtime state.
 Disjunctions involving `extra`, multiple extra predicates, extra inequality,
 and constructs the verifier cannot independently model remain incomplete, not
-verified. Supported runtime marker operators still obey the solver's restricted
-semantic fragment; parsing alone is not verification.
+verified. An `extra` marker on a root requirement cannot be attached to any
+parent-candidate extra context, so the adapter marks that requirement's
+evidence incomplete instead of dropping the condition and treating it as
+unconditional. Supported runtime marker operators still obey the solver's
+restricted semantic fragment; parsing alone is not verification.
