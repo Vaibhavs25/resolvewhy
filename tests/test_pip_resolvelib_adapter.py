@@ -332,6 +332,40 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertIsNone(view.activation)
         self.assertEqual(view.extra_context, ("feature-name",))
 
+    def test_root_extra_marker_without_parent_is_incomplete(self):
+        from resolvewhy.adapters.pip_resolvelib.capture import (
+            CaptureBuffer,
+            CapturedRun,
+            MatchEvent,
+            RequirementEvent,
+        )
+        from resolvewhy.adapters.pip_resolvelib.normalize import normalize_capture
+
+        root = Requirement('pkg==1.0; extra == "feature"')
+        view = DefaultPipSemantics().requirement_view(root)
+        self.assertTrue(view.complete)
+        self.assertEqual(view.extra_context, ("feature",))
+
+        buffer = CaptureBuffer()
+        buffer.requirements.append(
+            RequirementEvent(buffer.next_sequence(), root, None)
+        )
+        buffer.matches.append(
+            MatchEvent(buffer.next_sequence(), "pkg", FakeCandidate("pkg", Version("1.0")))
+        )
+        buffer.outcome = "resolved"
+        trace = normalize_capture(
+            CapturedRun(buffer=buffer, resolver_result=object(), native_error=None),
+            self.context(),
+        )
+        root_observations = [
+            item for item in trace.evidence_state.observations
+            if item.kind == "resolver-requirement"
+        ]
+        self.assertEqual(len(root_observations), 1)
+        self.assertEqual(root_observations[0].state, EvidenceStateKind.INCOMPLETE)
+        self.assertEqual(trace.evidence_state.overall, EvidenceStateKind.INCOMPLETE)
+
     def test_extra_and_python_runtime_marker_preserves_both_conditions(self):
         from resolvewhy.solving.semantics import eval_marker
 

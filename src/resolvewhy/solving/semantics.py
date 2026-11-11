@@ -118,6 +118,22 @@ def eval_marker(marker: MarkerExpression | None, context: RuntimeContext) -> boo
     if marker is None:
         return True
 
+    # A PEP 508 "extra" predicate is not an environment-global property.
+    # The verified fragment models it only through the selected parent's
+    # DependencyEdge.extra_context. Reject raw "extra" atoms anywhere in a
+    # runtime marker tree (including short-circuited branches) so a supplied
+    # runtime marker value cannot forge parent-scoped activation.
+    def contains_extra(expr: MarkerExpression) -> bool:
+        if expr.kind == "atom":
+            return expr.atom is not None and expr.atom.variable.lower() == "extra"
+        return any(contains_extra(child) for child in expr.children)
+
+    if contains_extra(marker):
+        raise SemanticGap(
+            "unsupported_extra_marker_semantics",
+            "extra marker atoms require parent-scoped dependency-edge semantics",
+        )
+
     def evaluate(expr: MarkerExpression) -> bool:
         if expr.kind == "atom":
             if expr.atom is None or expr.children:
