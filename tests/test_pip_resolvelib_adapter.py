@@ -332,6 +332,73 @@ class SemanticResolverIntegrationTests(unittest.TestCase):
         self.assertIsNone(view.activation)
         self.assertEqual(view.extra_context, ("feature-name",))
 
+    def test_extra_and_python_runtime_marker_preserves_both_conditions(self):
+        from resolvewhy.solving.semantics import eval_marker
+
+        requirement = Requirement(
+            'c; extra == "Feature_Name" and python_version >= "3.11"'
+        )
+        view = DefaultPipSemantics().requirement_view(requirement)
+        self.assertTrue(view.complete)
+        self.assertEqual(view.extra_context, ("feature-name",))
+        self.assertIsNotNone(view.activation)
+        self.assertTrue(eval_marker(view.activation, self.context().runtime_context))
+        old_python = replace(
+            self.context().runtime_context,
+            python_version="3.10",
+            marker_values=(("platform_machine", "x86_64"), ("python_version", "3.10")),
+        )
+        self.assertFalse(eval_marker(view.activation, old_python))
+
+    def test_extra_and_nested_runtime_boolean_group(self):
+        from resolvewhy.solving.semantics import eval_marker
+
+        requirement = Requirement(
+            'c; extra == "feature" and '
+            '(python_version >= "3.11" or sys_platform == "win32")'
+        )
+        view = DefaultPipSemantics().requirement_view(requirement)
+        self.assertTrue(view.complete)
+        self.assertEqual(view.extra_context, ("feature",))
+        self.assertEqual(view.activation.kind, "or")
+        self.assertTrue(eval_marker(view.activation, self.context().runtime_context))
+
+    def test_extra_disjunction_remains_incomplete(self):
+        view = DefaultPipSemantics().requirement_view(
+            Requirement('c; extra == "feature" or python_version >= "3.11"')
+        )
+        self.assertFalse(view.complete)
+        self.assertFalse(view.extra_context)
+        self.assertTrue(
+            any("disjunction" in reason for reason in view.unsupported_reasons)
+        )
+
+    def test_two_extra_conjuncts_are_not_misread_as_alternatives(self):
+        view = DefaultPipSemantics().requirement_view(
+            Requirement('c; extra == "one" and extra == "two"')
+        )
+        self.assertFalse(view.complete)
+        self.assertFalse(view.extra_context)
+        self.assertTrue(
+            any("multiple extra predicates" in reason for reason in view.unsupported_reasons)
+        )
+
+    def test_extra_inequality_remains_incomplete(self):
+        view = DefaultPipSemantics().requirement_view(
+            Requirement('c; extra != "feature"')
+        )
+        self.assertFalse(view.complete)
+        self.assertFalse(view.extra_context)
+        self.assertTrue(
+            any("unsupported extra marker comparison" in reason for reason in view.unsupported_reasons)
+        )
+
+    def test_marker_free_requirement_stays_unconditional(self):
+        view = DefaultPipSemantics().requirement_view(Requirement("c"))
+        self.assertTrue(view.complete)
+        self.assertEqual(view.extra_context, ())
+        self.assertIsNone(view.activation)
+
     def test_unsupported_compatible_release_with_extras_is_incomplete(self):
         view = DefaultPipSemantics().requirement_view(Requirement("c[feature]~=1.4.5rc1"))
         self.assertFalse(view.complete)
