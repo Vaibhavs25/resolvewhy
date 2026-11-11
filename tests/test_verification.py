@@ -389,6 +389,113 @@ class ProductionVerifierTests(unittest.TestCase):
             eval_marker(expression, ctx)
         self.assertEqual(raised.exception.code, "unsupported_extra_marker_semantics")
 
+    def _verify_conjunctive_optional_dependency(
+        self,
+        *,
+        extra_requested: bool,
+        python_version: str,
+        marker_version: str = "3.11",
+    ):
+        """Verify the conjunction over an authoritative finite domain."""
+        ctx = _ctx(
+            python_version=python_version,
+            python_full_version=python_version + ".0",
+        )
+        parent = replace(
+            _candidate("a", "1.0"),
+            declared_extras=("feature",),
+            declared_extras_status=DeclaredExtrasStatus.COMPLETE,
+        )
+        root = replace(
+            _req("a", "==", "1.0"),
+            requested_extras=("feature",) if extra_requested else (),
+        )
+        child = replace(
+            _req("b", "==", "1.0", "from-a"),
+            parent_candidate_ref=parent.id,
+        )
+        runtime_marker = MarkerExpression(
+            kind="atom",
+            atom=MarkerAtom("python_version", ">=", marker_version),
+        )
+        edge = DependencyEdge(
+            id="dep:a-b",
+            parent_candidate_ref=parent.id,
+            requirement_ref=child.id,
+            activation=runtime_marker,
+            extra_context=("feature",),
+        )
+        constraints = (
+            _constraint(
+                "c:a",
+                SemanticConstraintKind.REQUIREMENT,
+                (SemanticLiteral(
+                    SemanticConstraintKind.REQUIREMENT, "a", parent.id,
+                    operator="==", value="1.0",
+                ),),
+                TraceRef(ReferenceKind.REQUIREMENT, root.id),
+                "obs:c:a",
+            ),
+            _constraint(
+                "c:a-b",
+                SemanticConstraintKind.DEPENDENCY,
+                (SemanticLiteral(
+                    SemanticConstraintKind.DEPENDENCY, "b", parent.id,
+                    operator="==", value="1.0", activation=runtime_marker,
+                ),),
+                TraceRef(ReferenceKind.DEPENDENCY, edge.id),
+                "obs:c:a-b",
+            ),
+        )
+        trace = replace(
+            _trace(
+                contexts=(ctx,),
+                requirements=(root, child),
+                candidates=(parent,),
+                domains=(
+                    _domain("a", ctx, (parent,)),
+                    _domain("b", ctx, ()),
+                ),
+                dependencies=(edge,),
+                constraints=constraints,
+            ),
+            schema="resolvewhy-trace/1.1",
+        )
+        return verify(
+            replace(
+                trace,
+                proof_claim=replace(
+                    trace.proof_claim,
+                    status_claim=(
+                        ProofStatus.UNSAT
+                        if extra_requested and python_version >= marker_version
+                        else ProofStatus.SAT
+                    ),
+                ),
+            )
+        )
+
+    def test_extra_and_runtime_marker_both_active_enforce_dependency(self):
+        result = self._verify_conjunctive_optional_dependency(
+            extra_requested=True,
+            python_version="3.11",
+        )
+        self.assertEqual(result.status, VerificationStatus.VERIFIED_UNSAT)
+
+    def test_extra_active_but_runtime_marker_false_is_satisfiable(self):
+        result = self._verify_conjunctive_optional_dependency(
+            extra_requested=True,
+            python_version="3.10",
+        )
+        self.assertEqual(result.status, VerificationStatus.VERIFIED_SAT)
+
+    def test_runtime_marker_true_but_extra_absent_is_satisfiable(self):
+        result = self._verify_conjunctive_optional_dependency(
+            extra_requested=False,
+            python_version="3.11",
+        )
+        self.assertEqual(result.status, VerificationStatus.VERIFIED_SAT)
+
     def test_simple_sat_trace(self):
         ctx = _ctx()
         cand = _candidate("pkg", "1.0")
