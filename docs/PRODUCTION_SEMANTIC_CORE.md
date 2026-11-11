@@ -67,6 +67,16 @@ their own non-verified diagnostics instead; neither is treated as proof that
 the extra is absent. Candidate-domain coverage and normal provenance checks
 remain independent requirements for any verified claim.
 
+A raw `extra` marker atom in a requirement or dependency runtime activation
+cannot be independently evaluated using `RuntimeContext.marker_values`,
+even if that context supplies an `extra` key. That would make a
+parent-specific PEP 508 condition act like a global environment flag.
+The verifier rejects these markers as `unsupported_extra_marker_semantics`,
+including when the atom appears in a short-circuited boolean branch.
+Supported extra conditions must instead be normalized into the selected
+parent's `DependencyEdge.extra_context` alongside any separately supported
+runtime marker activation.
+
 ## Relationship to research code
 
 `research/trace_only_verifier.py` remains the fixture-level research verifier. The production model does not copy that implementation into `src/`.
