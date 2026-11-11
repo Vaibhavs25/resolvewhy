@@ -175,31 +175,58 @@ def _canonical_extra_values(value: object | None) -> tuple[tuple[str, ...], tupl
     return tuple(sorted(normalized)), ()
 
 
-def _extra_marker_context(marker: object | None) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Extract a simple ``extra == 'name'`` marker for an optional edge.
+def _extra_marker_context(
+    marker: MarkerExpression | None,
+) -> tuple[tuple[str, ...], MarkerExpression | None, tuple[str, ...]]:
+    """Split one extra equality from conjunctive runtime conditions.
 
-    More elaborate boolean combinations stay explicitly incomplete.  Treating
-    them as an unconditional dependency would be unsound.
+    Extra selection is parent-scoped, while runtime marker activation uses
+    the existing marker evaluator. A disjunction containing an extra cannot
+    be represented by a single extra context and remains incomplete.
     """
     if marker is None:
-        return (), ()
-    markers = getattr(marker, "_markers", None)
-    # ``packaging`` currently exposes an AST list containing a single
-    # three-item tuple, while older compatible implementations may expose the
-    # tuple directly.  Accept those two equivalent simple shapes only.
-    simple = markers[0] if isinstance(markers, list) and len(markers) == 1 else markers
-    if not isinstance(simple, tuple) or len(simple) != 3:
-        if "extra" in str(markers):
-            return (), ("combined extra marker is outside the supported fragment",)
-        return (), ()
-    variable, operator, value = simple
-    if str(variable) != "extra":
-        return (), ()
-    value_text = getattr(value, "value", value)
-    if str(operator) != "==" or not isinstance(value_text, str):
-        return (), ("unsupported extra marker",)
-    values, errors = _canonical_extra_values((value_text,))
-    return values, errors
+        return (), None, ()
+
+    def has_extra(expr: MarkerExpression) -> bool:
+        if expr.kind == "atom":
+            return expr.atom is not None and expr.atom.variable == "extra"
+        return any(has_extra(child) for child in expr.children)
+
+    def conjuncts(expr: MarkerExpression) -> list[MarkerExpression]:
+        if expr.kind == "and":
+            return [part for child in expr.children for part in conjuncts(child)]
+        return [expr]
+
+    requested: list[str] = []
+    runtime_terms: list[MarkerExpression] = []
+    for term in conjuncts(marker):
+        if term.kind == "atom" and term.atom is not None and term.atom.variable == "extra":
+            if term.atom.operator != "==":
+                return (), None, ("unsupported extra marker comparison",)
+            values, errors = _canonical_extra_values((term.atom.value,))
+            if errors:
+                return (), None, errors
+            requested.extend(values)
+        elif has_extra(term):
+            return (), None, ("disjunction or negation involving extra is outside the supported fragment",)
+        else:
+            runtime_terms.append(term)
+
+    if not requested:
+        return (), marker, ()
+    if len(requested) != 1:
+        # Two extra predicates must not become a tuple of alternatives:
+        # extra_context means OR, whereas separate conjuncts mean AND.
+        return (), None, ("multiple extra predicates are outside the supported fragment",)
+    if not runtime_terms:
+        return (requested[0],), None, ()
+    if len(runtime_terms) == 1:
+        return (requested[0],), runtime_terms[0], ()
+    return (
+        (requested[0],),
+        MarkerExpression(kind="and", children=tuple(runtime_terms)),
+        (),
+    )
 
 
 def _compatible_release_constraints(version: str) -> tuple[tuple[VersionConstraint, ...], str | None]:
@@ -407,17 +434,12 @@ class DefaultPipSemantics:
             parsed = _read_first_attr(ireq, ("req",)) if ireq is not None else None
             marker = _read_first_attr(parsed, ("marker",)) if parsed is not None else None
 
-        extra_context, extra_marker_unsupported = _extra_marker_context(marker)
-        activation: MarkerExpression | None
-        marker_unsupported: tuple[str, ...]
-        if extra_context:
-            # The simple extra marker is represented by DependencyEdge
-            # extra_context rather than as a runtime marker variable.
-            activation, marker_unsupported = None, ()
-        else:
-            activation, marker_unsupported = _marker_expression_from_packaging(marker)
-        unsupported.extend(extra_marker_unsupported)
+        parsed_marker, marker_unsupported = _marker_expression_from_packaging(marker)
+        extra_context, activation, extra_marker_unsupported = _extra_marker_context(
+            parsed_marker
+        )
         unsupported.extend(marker_unsupported)
+        unsupported.extend(extra_marker_unsupported)
 
         explicit_candidate = None
         lookup = getattr(requirement, "get_candidate_lookup", None)

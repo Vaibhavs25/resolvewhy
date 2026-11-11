@@ -86,7 +86,10 @@ The accessor deliberately exposes a limited semantic surface:
 
 - package/name;
 - version constraints supported by the validated six comparison operators;
-- canonical requested extras and simple `extra == "name"` optional-edge markers;
+- canonical requested extras, simple `extra == "name"` optional-edge markers,
+  and one canonical extra equality conjoined with supported runtime marker
+  conditions (including a parenthesized runtime-only `and`/`or` group);
+  parent-scoped extra selection and runtime activation are both required;
 - raw requirement text;
 - packaging marker expressions where the supplied object exposes its structured marker AST;
 - explicit candidate lookup when exposed;
@@ -381,3 +384,13 @@ The production trace is serialized through the existing Phase 2 codec. No adapte
 Phase 3A does not modify the research conclusion, the 18-case historical fixture corpus, or the final semantic boundary.
 
 The adapter is an engineering implementation of the already validated finite semantic concepts. Where pip/resolvelib exposes less evidence than the semantic contract requires, the adapter reports that limitation instead of weakening the contract.
+
+The extra-marker combination `extra == "feature" and python_version >= "3.11"`
+is normalized into both parent-scoped `extra_context=("feature",)` and
+a runtime marker activation. A nested runtime-only group such as
+`extra == "feature" and (python_version >= "3.11" or sys_platform == "win32")`
+is represented without expanding extra selection into global runtime state.
+Disjunctions involving `extra`, multiple extra predicates, extra inequality,
+and constructs the verifier cannot independently model remain incomplete, not
+verified. Supported runtime marker operators still obey the solver's restricted
+semantic fragment; parsing alone is not verification.
